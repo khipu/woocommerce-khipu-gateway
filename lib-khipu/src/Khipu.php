@@ -108,7 +108,7 @@ class Khipu
    *   Nombre del servicio
    */
   public static function getUrlService($service_name) {
-    $url_khipu = 'http://local.khipu.com:8080/payment/api/' . self::VERSION_KHIPU_SERVICE . '/';
+    $url_khipu = 'https://khipu.com/api/' . self::VERSION_KHIPU_SERVICE . '/';
 
     $services_name = self::getAllServicesName();
 

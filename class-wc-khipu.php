@@ -150,7 +150,7 @@ function woocommerce_khipu_init()
         {
             $Khipu = new Khipu();
             $Khipu->authenticate($this->receiver_id, $this->secret);
-            $Khipu->setGenerator('woocommerce-khipu-1.2');
+            $Khipu->setGenerator('woocommerce-khipu-1.3');
             $service = $Khipu->loadService('ReceiverBanks');
             return $service->consult();
         }
@@ -259,7 +259,7 @@ EOD;
 
             $Khipu = new Khipu();
             $Khipu->authenticate($this->receiver_id, $this->secret);
-            $Khipu->setGenerator('woocommerce-khipu-1.2');
+            $Khipu->setGenerator('woocommerce-khipu-1.3');
             $create_page_service = $Khipu->loadService('CreatePaymentURL');
 
             $item_names = array();
@@ -348,7 +348,7 @@ EOD;
             $Khipu = new Khipu();
             $_POST = array_map('stripslashes', $_POST);
             $Khipu->authenticate($this->receiver_id, $this->secret);
-            $Khipu->setGenerator('woocommerce-khipu-1.2');
+            $Khipu->setGenerator('woocommerce-khipu-1.3');
             $create_page_service = $Khipu->loadService('VerifyPaymentNotification');
             $create_page_service->setDataFromPost();
             if ($_POST['receiver_id'] != $this->receiver_id) {
