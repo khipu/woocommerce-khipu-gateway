@@ -57,10 +57,10 @@ class Khipu
     $this->secret = $secret;
   }
 
-  protected $generator;
+  protected $agent = 'lib-php-1.3';
 
-  public function setGenerator($generator = null) {
-      $this->generator = $generator;
+  public function setAgent($agent) {
+      $this->agent = 'lib-php-1.3 - '.$agent;
       return $this;
   }
 
@@ -93,7 +93,7 @@ class Khipu
       else {
         $service = new $class();
       }
-        $service->setGenerator($this->generator);
+        $service->setAgent($this->agent);
         return $service;
     }
     // Si no existe el servicio se invoca un Exception
