@@ -41,6 +41,9 @@ class KhipuServiceUpdatePaymentNotificationUrl extends KhipuService {
       'url'         => $this->data['url'],
       'api_version' => $this->data['api_version'],
     );
+    if($this->generator) {
+        $data_to_send['generator'] = $this->generator;
+    }
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $this->apiUrl);

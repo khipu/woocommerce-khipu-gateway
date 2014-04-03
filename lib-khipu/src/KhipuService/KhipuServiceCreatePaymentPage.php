@@ -65,6 +65,13 @@ class KhipuServiceCreatePaymentPage extends KhipuService {
       $input_hidden->setAttribute('value', $value);
       $form->appendChild($input_hidden);
     }
+      if($this->generator) {
+          $input_hidden = $html->createElement('input');
+          $input_hidden->setAttribute('type', 'hidden');
+          $input_hidden->setAttribute('name', 'generator');
+          $input_hidden->setAttribute('value', $this->generator);
+          $form->appendChild($input_hidden);
+      }
 
     $buttons = Khipu::getButtonsKhipu();
     if (isset($buttons[$button_type])) {

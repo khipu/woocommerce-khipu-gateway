@@ -56,6 +56,12 @@ abstract class KhipuService {
     $this->secret = $secret;
   }
 
+  protected $generator;
+  public function setGenerator($generator) {
+      $this->generator = $generator;
+      return $this;
+  }
+
   /**
    * Genera el Hash que requiere Khipu.
    *

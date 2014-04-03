@@ -38,6 +38,9 @@ class KhipuServicePaymentStatus extends KhipuService {
       'receiver_id' => $this->receiver_id,
       'payment_id' => $this->data['payment_id'],
     );
+    if($this->generator) {
+        $data_to_send['generator'] = $this->generator;
+    }
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $this->apiUrl);

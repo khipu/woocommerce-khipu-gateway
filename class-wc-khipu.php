@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 1.2
+ * Version: 1.3
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -150,6 +150,7 @@ function woocommerce_khipu_init()
         {
             $Khipu = new Khipu();
             $Khipu->authenticate($this->receiver_id, $this->secret);
+            $Khipu->setGenerator('woocommerce-khipu-1.2');
             $service = $Khipu->loadService('ReceiverBanks');
             return $service->consult();
         }
@@ -258,6 +259,7 @@ EOD;
 
             $Khipu = new Khipu();
             $Khipu->authenticate($this->receiver_id, $this->secret);
+            $Khipu->setGenerator('woocommerce-khipu-1.2');
             $create_page_service = $Khipu->loadService('CreatePaymentURL');
 
             $item_names = array();
@@ -346,6 +348,7 @@ EOD;
             $Khipu = new Khipu();
             $_POST = array_map('stripslashes', $_POST);
             $Khipu->authenticate($this->receiver_id, $this->secret);
+            $Khipu->setGenerator('woocommerce-khipu-1.2');
             $create_page_service = $Khipu->loadService('VerifyPaymentNotification');
             $create_page_service->setDataFromPost();
             if ($_POST['receiver_id'] != $this->receiver_id) {
