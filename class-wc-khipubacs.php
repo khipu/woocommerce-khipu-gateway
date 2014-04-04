@@ -190,7 +190,8 @@ function woocommerce_khipubacs_init()
 
             $manualUrl = 'manual-url';
 
-            return "<script>document.location.href='" . $response->$manualUrl . "';</script>";
+            wp_redirect($response->$manualUrl);
+            return;
 
         }
 

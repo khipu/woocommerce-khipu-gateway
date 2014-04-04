@@ -120,7 +120,7 @@ function woocommerce_khipu_init()
                 'description' => array(
                     'title' => __('Description', 'woocommerce'),
                     'type' => 'textarea',
-                    'description' => __( 'Payment method description that the customer will see on your checkout.', 'woocommerce' ),
+                    'description' => __('Payment method description that the customer will see on your checkout.', 'woocommerce'),
                     'default' => __('khipu incluye una aplicación simple y segura para pagar con tu banco'
                         . ' Evita errores al escribir datos de la transferencia y brinda protección adicional contra algunos tipos de ataque.'
                         . ' Si no has instalado la aplicación, la página de pago te ayuda a instalarla. Esta es la opción recomendada.', 'woocommerce')
@@ -155,7 +155,8 @@ function woocommerce_khipu_init()
             return $service->consult();
         }
 
-        function comm_error() {
+        function comm_error()
+        {
             $msg = __('Error de comunicación con khipu, por favor intente nuevamente más tarde.');
             return "<div class='woocommerce-error'>$msg</div>";
         }
@@ -168,7 +169,7 @@ function woocommerce_khipu_init()
 
             $banks = json_decode($this->get_available_banks());
 
-            if(!$banks) {
+            if (!$banks) {
                 return $this->comm_error();
             }
 
@@ -249,10 +250,43 @@ EOD;
             return $bankSelector;
         }
 
+
+        function generate_khipu_terminal_page()
+        {
+            $json_string = stripslashes($_GET['payment-data']);
+
+            $response = json_decode($json_string);
+
+            $readyForTerminal = 'ready-for-terminal';
+
+            if (!$response->$readyForTerminal) {
+                wp_redirect($response->url);
+                return;
+            }
+
+            // Add the external libraries
+            wp_enqueue_script('atmosphere', '//cdnjs.cloudflare.com/ajax/libs/atmosphere/2.1.2/atmosphere.min.js');
+            wp_enqueue_script('khipu-js', '//storage.googleapis.com/installer/khipu-1.1.js', array('jquery'));
+
+            $waitMsg = __('Estamos iniciando el terminal de pagos khipu, por favor espera unos minutos.<br>No cierres esta página, una vez que completes el pago serás redirigido automáticamente.');
+            $out = <<<EOD
+<div id="wait-msg" class="woocommerce-info">$waitMsg</div>
+<div id="khipu-chrome-extension-div" style="display: none"></div>
+<script>
+window.onload = function () {
+    KhipuLib.onLoad({
+        data: $json_string
+    })
+}
+</script>
+EOD;
+            return $out;
+        }
+
         /**
          * Create the payment on khipu and try to start the app.
          */
-        function generate_khipu_submit_button($order_id)
+        function generate_khipu_generate_payment($order_id)
         {
 
             $order = new WC_Order($order_id);
@@ -284,35 +318,13 @@ EOD;
 
             // We need the string json to use it with the khipu.js
             $json_string = $create_page_service->createUrl();
-            $response = json_decode($json_string);
 
-            if(!$response) {
+            if (!$json_string) {
                 return $this->comm_error();
             }
+            wp_redirect(add_query_arg(array('payment-data' => urlencode($json_string)), remove_query_arg(array('bank-id'), wp_get_referer())));
 
-            $readyForTerminal = 'ready-for-terminal';
-
-            if (!$response->$readyForTerminal) {
-                return "<script>document.location.href='" . $response->url . "';</script>";
-            }
-
-            // Add the external libraries
-            wp_enqueue_script('atmosphere', '//cdnjs.cloudflare.com/ajax/libs/atmosphere/2.1.2/atmosphere.min.js');
-            wp_enqueue_script('khipu-js', '//storage.googleapis.com/installer/khipu-1.1.js', array('jquery'));
-
-            $waitMsg = __('Estamos iniciando el terminal de pagos khipu, por favor espera unos minutos.<br>No cierres esta página, una vez que completes el pago serás redirigido automáticamente.');
-            $out = <<<EOD
-<div id="wait-msg" class="woocommerce-info">$waitMsg</div>
-<div id="khipu-chrome-extension-div" style="display: none"></div>
-<script>
-window.onload = function () {
-    KhipuLib.onLoad({
-        data: $json_string
-    })
-}
-</script>
-EOD;
-            return $out;
+            return;
         }
 
         /**
@@ -333,10 +345,12 @@ EOD;
          */
         function receipt_page($order)
         {
-            if (!$_REQUEST['bank-id']) {
-                echo $this->generate_khipu_bankselect();
+            if ($_REQUEST['payment-data']) {
+                echo $this->generate_khipu_terminal_page();
+            } else if ($_REQUEST['bank-id']) {
+                echo $this->generate_khipu_generate_payment($order);
             } else {
-                echo $this->generate_khipu_submit_button($order);
+                echo $this->generate_khipu_bankselect();
             }
         }
 
