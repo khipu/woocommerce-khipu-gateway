@@ -1,0 +1,3 @@
+[submodule "lib/lib-khipu"]
+	path = lib/lib-khipu
+	url = https://github.com/khipu/lib-php

@@ -38,7 +38,7 @@ function woocommerce_khipubacs_showMessage($message, $errormsg = false)
 function woocommerce_khipubacs_init()
 {
 
-    require_once "lib-khipu/src/Khipu.php";
+    require_once "lib/lib-khipu/src/Khipu.php";
 
     if (!class_exists('WC_Payment_Gateway')) {
 
@@ -184,7 +184,7 @@ function woocommerce_khipubacs_init()
 
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipubacs-1.3');
+                $Khipu->setAgent('woocommerce-khipubacs-1.5');
                 $create_page_service = $Khipu->loadService('CreatePaymentURL');
 
                 $item_names = array();
@@ -243,22 +243,65 @@ function woocommerce_khipubacs_init()
             }
 
             /**
-             * Check Khipu IPN validity
+             * Get order from Khipu IPN
              **/
-            function check_ipn_request_is_valid()
+            function get_order_from_ipn()
             {
-                $Khipu = new Khipu();
+
                 $_POST = array_map('stripslashes', $_POST);
+
+                $api_version = $_POST['api_version'];
+
+
+                if($api_version == '1.2') {
+                    return $this->get_order_from_ipn_1_2();
+                } else if($api_version == '1.3') {
+                    return $this->get_order_from_ipn_1_3();
+                }
+                return false;
+
+            }
+
+            /**
+             * Get order from Khipu IPN API 1.2
+             **/
+            function get_order_from_ipn_1_2() {
+                $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipubacs-1.3');
-                $create_page_service = $Khipu->loadService('VerifyPaymentNotification');
-                $create_page_service->setDataFromPost();
+                $Khipu->setAgent('woocommerce-khipubacs-1.5');
+                $service = $Khipu->loadService('VerifyPaymentNotification');
+                $service->setDataFromPost();
                 if ($_POST['receiver_id'] != $this->receiver_id) {
                     return false;
                 }
 
-                $verify = $create_page_service->verify();
-                return $verify['response'] == 'VERIFIED';
+                $verify = $service->verify();
+                if($verify['response'] == 'VERIFIED'){
+                    return $this->get_khipubacs_order($_POST['custom'], $_POST['transaction_id']);
+                }
+                return false;
+            }
+
+            /**
+             * Get order from Khipu IPN API 1.3
+             **/
+            function get_order_from_ipn_1_3() {
+                $Khipu = new Khipu();
+                $Khipu->authenticate($this->receiver_id, $this->secret);
+                $Khipu->setAgent('woocommerce-khipubacs-1.5');
+                $service = $Khipu->loadService('GetPaymentNotification');
+                $service->setDataFromPost();
+                $response = json_decode($service->consult());
+                if ($response->receiver_id != $this->receiver_id) {
+                    return false;
+                }
+                $order = $this->get_khipubacs_order($response->custom, $response->transaction_id);
+
+                if($order) {
+                    return $order;
+                }
+                return false;
+
             }
 
             /**
@@ -268,47 +311,47 @@ function woocommerce_khipubacs_init()
             {
                 @ob_clean();
 
-                if (!empty($_POST) && $this->check_ipn_request_is_valid()) {
-                    header('HTTP/1.1 200 OK');
-                    do_action("valid-khipubacs-ipn-request", $_POST);
-                } else {
-                    wp_die("khipu notification validation failed");
+                if(empty($_POST) || empty($_POST['api_version'])){
+                    wp_die("khipu notification validation invalid");
                 }
-            }
 
+
+                $order = $this->get_order_from_ipn();
+
+                if($order) {
+                    header('HTTP/1.1 200 OK');
+                    do_action("valid-khipu-ipn-request", $order);
+                    return;
+                }
+
+            }
 
             /**
              * Successful Payment
              */
-            function successful_request($posted)
+            function successful_request($order)
             {
-                $posted = stripslashes_deep($posted);
-
-                if (!empty($posted['transaction_id']) && !empty($posted['custom'])) {
-
-                    $order = $this->get_khipubacs_order($posted);
-
-                    if ($order->status == 'completed') {
-                        exit;
-                    }
-
-                    $order->add_order_note(__('Pago con khipubacs verificado', 'woocommerce'));
-                    $order->payment_complete();
+                if ($order->status == 'completed') {
+                    exit;
                 }
+                $order->add_order_note(__('Pago con khipu verificado', 'woocommerce'));
+                $order->payment_complete();
             }
+
+
 
 
             /**
              * get_khipu_order function.
              */
-            function get_khipubacs_order($posted)
+            function get_khipubacs_order($custom, $transaction_id)
             {
-                $custom = maybe_unserialize($posted['custom']);
+                $custom = maybe_unserialize($custom);
 
                 // Backwards comp for IPN requests
                 if (is_numeric($custom)) {
                     $order_id = (int)$custom;
-                    $order_key = $posted['transaction_id'];
+                    $order_key = $transaction_id;
                 } elseif (is_string($custom)) {
                     $order_id = (int)str_replace($this->invoice_prefix, '', $custom);
                     $order_key = $custom;

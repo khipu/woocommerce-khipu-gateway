@@ -4,7 +4,7 @@ Donate link:
 Tags: payment gateway, khipu, woocommerce, chile
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.4
+Stable tag: 1.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,6 +32,7 @@ No hay preguntas aún.
 
 == Changelog ==
 
+1.5 Uso de API de notificación 1.3
 1.4 Chequeo de existencia del plugin WooCommerce
 1.3 Uso de API khipu 1.3
 1.0 Versión inicial
