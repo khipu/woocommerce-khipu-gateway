@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 1.4
+ * Version: 1.5
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -320,7 +320,7 @@ function woocommerce_khipubacs_init()
 
                 if($order) {
                     header('HTTP/1.1 200 OK');
-                    do_action("valid-khipu-ipn-request", $order);
+                    do_action("valid-khipubacs-ipn-request", $order);
                     return;
                 }
 
@@ -334,7 +334,7 @@ function woocommerce_khipubacs_init()
                 if ($order->status == 'completed') {
                     exit;
                 }
-                $order->add_order_note(__('Pago con khipu verificado', 'woocommerce'));
+                $order->add_order_note(__('Pago con khipubacs verificado', 'woocommerce'));
                 $order->payment_complete();
             }
 
