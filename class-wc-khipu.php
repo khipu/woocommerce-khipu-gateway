@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 1.5
+ * Version: 1.6
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -177,7 +177,7 @@ function woocommerce_khipu_init()
             {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.5');
+                $Khipu->setAgent('woocommerce-khipu-1.6;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('ReceiverBanks');
                 return $service->consult();
             }
@@ -200,7 +200,7 @@ function woocommerce_khipu_init()
                     return $this->comm_error();
                 }
 
-                $bankSelector = "<form method=\"GET\">\n";
+                $bankSelector = "<form method=\"POST\">\n";
 
                 foreach ($_REQUEST as $key => $value) {
                     $bankSelector .= "<input type=\"hidden\" value =\"$value\" name=\"$key\">\n";
@@ -280,7 +280,8 @@ EOD;
 
             function generate_khipu_terminal_page()
             {
-                $json_string = stripslashes($_GET['payment-data']);
+
+                $json_string = $this->base64url_decode_uncompress($_REQUEST['payment-data']);
 
                 $response = json_decode($json_string);
 
@@ -320,7 +321,7 @@ EOD;
 
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.5');
+                $Khipu->setAgent('woocommerce-khipu-1.6;;'.site_url().';;'.bloginfo('name'));
                 $create_page_service = $Khipu->loadService('CreatePaymentURL');
 
                 $item_names = array();
@@ -349,9 +350,19 @@ EOD;
                 if (!$json_string) {
                     return $this->comm_error();
                 }
-                wp_redirect(add_query_arg(array('payment-data' => urlencode($json_string)), remove_query_arg(array('bank-id'), wp_get_referer())));
+
+
+                wp_redirect(add_query_arg(array('payment-data' => $this->base64url_encode_compress($json_string)), remove_query_arg(array('bank-id'), wp_get_referer())));
 
                 return;
+            }
+
+            function base64url_encode_compress($data) {
+                return rtrim(strtr(base64_encode(gzcompress($data)), '+/', '-_'), '=');
+            }
+
+            function base64url_decode_uncompress($data) {
+                return gzuncompress(base64_decode(str_pad(strtr($data, '-_', '+/'), strlen($data) % 4, '=', STR_PAD_RIGHT)));
             }
 
             /**
@@ -407,7 +418,7 @@ EOD;
             function get_order_from_ipn_1_2() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.5');
+                $Khipu->setAgent('woocommerce-khipu-1.6;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('VerifyPaymentNotification');
                 $service->setDataFromPost();
                 if ($_POST['receiver_id'] != $this->receiver_id) {
@@ -427,7 +438,7 @@ EOD;
             function get_order_from_ipn_1_3() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.5');
+                $Khipu->setAgent('woocommerce-khipu-1.6;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('GetPaymentNotification');
                 $service->setDataFromPost();
                 $response = json_decode($service->consult());
