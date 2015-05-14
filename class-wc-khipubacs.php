@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 1.7
+ * Version: 1.8
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -189,7 +189,7 @@ function woocommerce_khipubacs_init()
 
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipubacs-1.7;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipubacs-1.8;;'.site_url().';;'.bloginfo('name'));
                 $create_page_service = $Khipu->loadService('CreatePaymentURL');
 
                 $item_names = array();
@@ -273,7 +273,7 @@ function woocommerce_khipubacs_init()
             function get_order_from_ipn_1_2() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipubacs-1.7;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipubacs-1.8;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('VerifyPaymentNotification');
                 $service->setDataFromPost();
                 if ($_POST['receiver_id'] != $this->receiver_id) {
@@ -293,7 +293,7 @@ function woocommerce_khipubacs_init()
             function get_order_from_ipn_1_3() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipubacs-1.7;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipubacs-1.8;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('GetPaymentNotification');
                 $service->setDataFromPost();
                 $response = json_decode($service->consult());
