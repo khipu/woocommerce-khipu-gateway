@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 1.8
+ * Version: 2.0
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -18,7 +18,12 @@ add_action('plugins_loaded', 'woocommerce_khipu_init', 0);
 
 function woocommerce_khipu_showWooCommerceNeeded()
 {
-    woocommerce_khipu_showMessage("Debes instalar y activar el plugin WooCommerce.", true);
+    woocommerce_khipu_showMessage("Debes instalar y activar el plugin WooCommerce. El plugin de khipu se deshabilitará hasta que esto este corregido.", true);
+}
+
+function woocommerce_khipu_orderReceivedHasSpaces()
+{
+    woocommerce_khipu_showMessage("El 'endpoint' de Pedido recibido tiene espacios, debe ser una palabra sin espacios, para corregirlo anda a WooCommerce->Ajustes->Finalizar compra y corrige el valor en el campo 'Pedido recibido'. El plugin de khipu se deshabilitará hasta que esto este corregido.", true);
 }
 
 
@@ -40,11 +45,12 @@ function woocommerce_khipu_init()
 
     require_once "lib/lib-khipu/src/Khipu.php";
 
+    $orderReceived = isset( WC()->query->query_vars[ 'order-received' ] ) ? WC()->query->query_vars[ 'order-received' ] : 'order-received';
 
     if (!class_exists('WC_Payment_Gateway')) {
-
         add_action('admin_notices', 'woocommerce_khipu_showWooCommerceNeeded');
-
+    } else if (strpos($orderReceived, ' ') !== false){
+        add_action('admin_notices', 'woocommerce_khipu_orderReceivedHasSpaces');
     } else {
 
         class WC_Gateway_khipu extends WC_Payment_Gateway
@@ -182,7 +188,7 @@ function woocommerce_khipu_init()
             {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.8;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('ReceiverBanks');
                 return $service->consult();
             }
@@ -326,7 +332,7 @@ EOD;
 
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.8;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
                 $create_page_service = $Khipu->loadService('CreatePaymentURL');
 
                 $item_names = array();
@@ -373,23 +379,16 @@ EOD;
             /**
              * Process the payment and return the result
              */
-            function process_payment($order_id)
-            {
-
+            function process_payment($order_id){
                 $order = new WC_Order($order_id);
-                return array(
-                    'result' => 'success',
-                    'redirect' => add_query_arg('order', $order->id, add_query_arg('key', $order->order_key, get_permalink(woocommerce_get_page_id('pay'))))
-
-                );
+                return array('result' => 'success', 'redirect' => $order->get_checkout_payment_url( true ));
             }
 
             /**
              * Output for the order received page.
              */
-            function receipt_page($order_id)
+            function receipt_page($order)
             {
-                $order = new WC_Order( $order_id );
                 if (isset($_REQUEST['payment-data'])) {
                     echo $this->generate_khipu_terminal_page();
                 } else if (isset($_REQUEST['bank-id'])) {
@@ -425,7 +424,7 @@ EOD;
             function get_order_from_ipn_1_2() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.8;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('VerifyPaymentNotification');
                 $service->setDataFromPost();
                 if ($_POST['receiver_id'] != $this->receiver_id) {
@@ -445,7 +444,7 @@ EOD;
             function get_order_from_ipn_1_3() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-1.8;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('GetPaymentNotification');
                 $service->setDataFromPost();
                 $response = json_decode($service->consult());
