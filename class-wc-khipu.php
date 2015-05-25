@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 2.0
+ * Version: 2.1
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -188,7 +188,7 @@ function woocommerce_khipu_init()
             {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.1;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('ReceiverBanks');
                 return $service->consult();
             }
@@ -332,7 +332,7 @@ EOD;
 
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.1;;'.site_url().';;'.bloginfo('name'));
                 $create_page_service = $Khipu->loadService('CreatePaymentURL');
 
                 $item_names = array();
@@ -424,7 +424,7 @@ EOD;
             function get_order_from_ipn_1_2() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.1;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('VerifyPaymentNotification');
                 $service->setDataFromPost();
                 if ($_POST['receiver_id'] != $this->receiver_id) {
@@ -444,7 +444,7 @@ EOD;
             function get_order_from_ipn_1_3() {
                 $Khipu = new Khipu();
                 $Khipu->authenticate($this->receiver_id, $this->secret);
-                $Khipu->setAgent('woocommerce-khipu-2.0;;'.site_url().';;'.bloginfo('name'));
+                $Khipu->setAgent('woocommerce-khipu-2.1;;'.site_url().';;'.bloginfo('name'));
                 $service = $Khipu->loadService('GetPaymentNotification');
                 $service->setDataFromPost();
                 $response = json_decode($service->consult());
