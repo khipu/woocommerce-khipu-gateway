@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 2.3
+ * Version: 2.4.0
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -41,7 +41,7 @@ function woocommerce_khipubacs_showMessage($message, $errormsg = false)
 function woocommerce_khipubacs_init()
 {
 
-    require_once "lib/lib-khipu/src/Khipu.php";
+    require __DIR__ . '/vendor/autoload.php';
 
     if (!class_exists('WC_Payment_Gateway')) {
         add_action('admin_notices', 'woocommerce_khipubacs_showWooCommerceNeeded');
@@ -102,7 +102,7 @@ function woocommerce_khipubacs_init()
         function is_valid_for_use()
         {
             if (!in_array(get_woocommerce_currency(),
-                apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP')))
+                apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP', 'BOB')))
             ) {
                 return false;
             }
@@ -193,9 +193,22 @@ function woocommerce_khipubacs_init()
         }
 
 
-        function comm_error()
+        function comm_error($exception = null)
         {
-            $msg = __('Error de comunicación con khipu, por favor intente nuevamente más tarde.');
+            if(!$exception) {
+                $msg = __('Error de comunicación con khipu, por favor intente nuevamente más tarde.');
+            } else {
+                $msg = "<h2>Error de comunicación con khipu</h2><ul><li><strong>Código</strong>:" . $exception->getStatus() ."</li>";
+                $msg .= "<li><strong>Mensaje</strong>: " . $exception->getMessage() . "</li>";
+                if(method_exists($exception, 'getErrors')) {
+                    $msg .= "<li>Errores<ul>";
+                    foreach($exception->getErrors() as $errorItem) {
+                        $msg .= "<li><strong>" . $errorItem->getField() ."</strong>: " . $errorItem->getMessage() . "</li>";
+                    }
+                    $msg .= "</ul></li>";
+                }
+                $msg .= "</ul>";
+            }
             return "<div class='woocommerce-error'>$msg</div>";
         }
 
@@ -207,11 +220,6 @@ function woocommerce_khipubacs_init()
 
             $order = new WC_Order($order_id);
 
-            $Khipu = new Khipu();
-            $Khipu->authenticate($this->receiver_id, $this->secret);
-            $Khipu->setAgent('woocommerce-khipubacs-2.3;;' . site_url() . ';;' . bloginfo('name'));
-            $create_page_service = $Khipu->loadService('CreatePaymentURL');
-
             $item_names = array();
 
             if (sizeof($order->get_items()) > 0) {
@@ -222,27 +230,42 @@ function woocommerce_khipubacs_init()
                 }
             }
 
-            $create_page_service->setParameter('subject',
-                'Orden ' . $order->get_order_number() . ' - ' . get_bloginfo('name'));
-            $create_page_service->setParameter('body', implode(', ', $item_names));
-            $create_page_service->setParameter('amount', number_format($order->get_total(), 0, ',', ''));
-            $create_page_service->setParameter('transaction_id', ltrim($order->get_order_number(), '#'));
-            $create_page_service->setParameter('custom', serialize(array($order_id, $order->order_key)));
-            $create_page_service->setParameter('payer_email', $order->billing_email);
-            $create_page_service->setParameter('notify_url', $this->notify_url);
-            $create_page_service->setParameter('bank_id', '');
-            $create_page_service->setParameter('return_url', $this->get_return_url($order));
+            $configuration = new Khipu\Configuration();
+            $configuration->setSecret($this->secret);
+            $configuration->setReceiverId($this->receiver_id);
+            $configuration->setPlatform('opencart-khipu', '2.4.0');
 
-            $json_string = $create_page_service->createUrl();
-            $response = json_decode($json_string);
+            $client = new Khipu\ApiClient($configuration);
+            $payments = new Khipu\Client\PaymentsApi($client);
 
-            if (!$response) {
-                return $this->comm_error();
+            try {
+                $createPaymentResponse = $payments->paymentsPost(
+                    'Orden ' . $order->get_order_number() . ' - ' . get_bloginfo('name')
+                    , $order->get_order_currency()
+                    , number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', '')
+                    , ltrim($order->get_order_number(), '#')
+                    , serialize(array($order_id, $order->order_key))
+                    , implode(', ', $item_names)
+                    , null
+                    , $this->get_return_url($order)
+                    , null
+                    , null
+                    , $this->notify_url
+                    , '1.3'
+                    , null
+                    , null
+                    , null
+                    , $order->billing_email
+                    , null
+                    , null
+                    , null
+                    , null
+                );
+            } catch(\Khipu\ApiException $e) {
+                return $this->comm_error($e->getResponseObject());
             }
 
-            $manualUrl = 'manual-url';
-
-            wp_redirect($response->$manualUrl);
+            wp_redirect($createPaymentResponse->getTransferUrl());
             return;
 
         }
@@ -267,67 +290,28 @@ function woocommerce_khipubacs_init()
         /**
          * Get order from Khipu IPN
          **/
-        function get_order_from_ipn()
+        function get_order_from_notification()
         {
+            if ($_POST['api_version'] == '1.3') {
+                $configuration = new Khipu\Configuration();
+                $configuration->setSecret($this->secret);
+                $configuration->setReceiverId($this->receiver_id);
+                $configuration->setPlatform('woocommerce-khipu', '2.4.0');
 
-            $_POST = array_map('stripslashes', $_POST);
+                $client = new Khipu\ApiClient($configuration);
+                $payments = new Khipu\Client\PaymentsApi($client);
 
-            $api_version = $_POST['api_version'];
+                $paymentsResponse =  $payments->paymentsGet($_POST['notification_token']);
 
-            if ($api_version == '1.2') {
-                return $this->get_order_from_ipn_1_2();
-            } else {
-                if ($api_version == '1.3') {
-                    return $this->get_order_from_ipn_1_3();
+                $order = $this->get_khipubacs_order($paymentsResponse->getCustom(), $paymentsResponse->getTransactionId());
+
+                if($paymentsResponse->getAmount() == floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', ''))
+                    && $paymentsResponse->getCurrency() == $order->get_order_currency()) {
+                    return $order;
                 }
             }
-            return false;
-
         }
 
-        /**
-         * Get order from Khipu IPN API 1.2
-         **/
-        function get_order_from_ipn_1_2()
-        {
-            $Khipu = new Khipu();
-            $Khipu->authenticate($this->receiver_id, $this->secret);
-            $Khipu->setAgent('woocommerce-khipubacs-2.3;;' . site_url() . ';;' . bloginfo('name'));
-            $service = $Khipu->loadService('VerifyPaymentNotification');
-            $service->setDataFromPost();
-            if ($_POST['receiver_id'] != $this->receiver_id) {
-                return false;
-            }
-
-            $verify = $service->verify();
-            if ($verify['response'] == 'VERIFIED') {
-                return $this->get_khipubacs_order($_POST['custom'], $_POST['transaction_id']);
-            }
-            return false;
-        }
-
-        /**
-         * Get order from Khipu IPN API 1.3
-         **/
-        function get_order_from_ipn_1_3()
-        {
-            $Khipu = new Khipu();
-            $Khipu->authenticate($this->receiver_id, $this->secret);
-            $Khipu->setAgent('woocommerce-khipubacs-2.3;;' . site_url() . ';;' . bloginfo('name'));
-            $service = $Khipu->loadService('GetPaymentNotification');
-            $service->setDataFromPost();
-            $response = json_decode($service->consult());
-            if ($response->receiver_id != $this->receiver_id) {
-                return false;
-            }
-            $order = $this->get_khipubacs_order($response->custom, $response->transaction_id);
-
-            if ($order) {
-                return $order;
-            }
-            return false;
-
-        }
 
         /**
          * Check for Khipu IPN Response
@@ -340,7 +324,7 @@ function woocommerce_khipubacs_init()
                 wp_die("khipu notification validation invalid");
             }
 
-            $order = $this->get_order_from_ipn();
+            $order = $this->get_order_from_notification();
 
             if ($order) {
                 header('HTTP/1.1 200 OK');
@@ -388,14 +372,6 @@ function woocommerce_khipubacs_init()
                 $order = new WC_Order($order_id);
             }
 
-            // Validate key
-            if ($order->order_key !== $order_key) {
-                if ($this->debug == 'yes') {
-                    $this->log->add('paypal', 'Error: Order Key does not match invoice.');
-                }
-                exit;
-            }
-
             return $order;
         }
 
@@ -412,24 +388,22 @@ function woocommerce_khipubacs_init()
 
     add_filter('woocommerce_payment_gateways', 'woocommerce_add_khipubacs_gateway');
 
-    function woocommerce_khipubacs_add_clp_currency($currencies)
-    {
-        $currencies["CLP"] = __('Pesos Chilenos');
+    add_filter('woocommerce_currencies', 'woocommerce_add_khipubacs_currencies' );
+
+    function woocommerce_add_khipubacs_currencies( $currencies ) {
+        $currencies['CLP'] = __( 'Peso Chileno', 'woocommerce' );
+        $currencies['BOB'] = __( 'Peso Boliviano', 'woocommerce' );
         return $currencies;
     }
 
-    function woocommerce_khipubacs_add_clp_currency_symbol($currency_symbol, $currency)
-    {
-        switch ($currency) {
-            case 'CLP':
-                $currency_symbol = '$';
-                break;
+    add_filter('woocommerce_currency_symbol', 'woocommerce_add_khipubacs_currencies_symbol', 10, 2);
+
+    function woocommerce_add_khipubacs_currencies_symbol( $currency_symbol, $currency ) {
+        switch( $currency ) {
+            case 'CLP': $currency_symbol = '$'; break;
+            case 'BOB': $currency_symbol = 'Bs'; break;
         }
         return $currency_symbol;
     }
-
-    add_filter('woocommerce_currencies', 'woocommerce_khipubacs_add_clp_currency', 10, 1);
-    add_filter('woocommerce_currency_symbol', 'woocommerce_khipubacs_add_clp_currency_symbol', 10, 2);
-
 
 }
