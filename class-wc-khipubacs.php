@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 2.4.0
+ * Version: 2.4.1
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -68,7 +68,7 @@ function woocommerce_khipubacs_init()
         public function __construct()
         {
             $this->id = 'khipubacs';
-            //$this->icon = plugins_url('images/buttons/50x25.png', __FILE__);
+            $this->icon = 'https://bi.khipu.com/150x50/capsule/transfer/transparent/'.$this->get_option('receiver_id');
             $this->has_fields = false;
             $this->method_title = __('Trasferencia normal', 'woocommerce');
             $this->notify_url = add_query_arg('wc-api', 'WC_Gateway_' . $this->id, home_url('/'));
@@ -233,7 +233,7 @@ function woocommerce_khipubacs_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('opencart-khipu', '2.4.0');
+            $configuration->setPlatform('opencart-khipu', '2.4.1');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -296,7 +296,7 @@ function woocommerce_khipubacs_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.4.0');
+                $configuration->setPlatform('woocommerce-khipu', '2.4.1');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);

@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 2.4.0
+ * Version: 2.4.1
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -68,7 +68,7 @@ function woocommerce_khipu_init()
         public function __construct()
         {
             $this->id = 'khipu';
-            $this->icon = plugins_url('images/buttons/110x25-transparent.png', __FILE__);
+            $this->icon = 'https://bi.khipu.com/150x50/capsule/khipu/transparent/'.$this->get_option('receiver_id');
             $this->has_fields = false;
             $this->method_title = __('khipu - Transferencia simplificada', 'woocommerce');
             $this->notify_url = add_query_arg('wc-api', 'WC_Gateway_' . $this->id, home_url('/'));
@@ -200,7 +200,7 @@ function woocommerce_khipu_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.4.0');
+            $configuration->setPlatform('woocommerce-khipu', '2.4.1');
 
             $client = new Khipu\ApiClient($configuration);
             $banks = new Khipu\Client\BanksApi($client);
@@ -264,10 +264,10 @@ function woocommerce_khipu_init()
 <script>
 	(function ($) {
 		var messages = [];
-		var bankRootSelect = $('#root-bank')
-		var bankOptions = []
-		var selectedRootBankId = 0
-		var selectedBankId = 0
+		var bankRootSelect = $('#root-bank');
+		var bankOptions = [];
+		var selectedRootBankId = 0;
+		var selectedBankId = 0;
 		bankRootSelect.attr("disabled", "disabled");
 EOD;
 
@@ -283,7 +283,7 @@ EOD;
             $bankSelector .= <<<EOD
 	function updateBankOptions(rootId, bankId) {
 		if (rootId) {
-			$('#root-bank').val(rootId)
+			$('#root-bank').val(rootId);
 		}
 
 		var idx = $('#root-bank :selected').val();
@@ -338,16 +338,17 @@ EOD;
             wp_enqueue_script('khipu-js', '//storage.googleapis.com/installer/khipu-1.1.js', array('jquery'));
 
             $waitMsg =
-                __('Estamos iniciando el terminal de pagos khipu, por favor espera unos minutos.<br>No cierres esta página, una vez que completes el pago serás redirigido automáticamente.');
+                __('    Estamos iniciando la aplicación khipu, por favor espera unos segundos.<br>No cierres esta página, una vez que completes el pago serás redirigido automáticamente.<br><br>Si pasado unos segundos no se ha abierto la aplicación<br><a href="javascript:openKhipu();" class="btn btn-default">Pincha aquí para abrirla</a>');
             $out = <<<EOD
 <div id="wait-msg" class="woocommerce-info">$waitMsg</div>
 <div id="khipu-chrome-extension-div" style="display: none"></div>
 <script>
-window.onload = function () {
+function openKhipu() {
     KhipuLib.onLoad({
         data: $json_string
     })
 }
+window.onload = openKhipu;
 </script>
 EOD;
             return $out;
@@ -375,7 +376,7 @@ EOD;
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('opencart-khipu', '2.4.0');
+            $configuration->setPlatform('woocommerce-khipu', '2.4.1');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -471,7 +472,7 @@ EOD;
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.4.0');
+                $configuration->setPlatform('woocommerce-khipu', '2.4.1');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
