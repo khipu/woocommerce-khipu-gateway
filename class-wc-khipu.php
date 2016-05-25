@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 2.4.1
+ * Version: 2.4.2
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -200,7 +200,7 @@ function woocommerce_khipu_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.4.1');
+            $configuration->setPlatform('woocommerce-khipu', '2.4.2');
 
             $client = new Khipu\ApiClient($configuration);
             $banks = new Khipu\Client\BanksApi($client);
@@ -275,7 +275,7 @@ EOD;
                 if (!$bank->getParent()) {
                     $bankSelector .= "bankRootSelect.append('<option value=\"" . $bank->getBankId(). "\">". $bank->getName(). "</option>');\n";
                     $bankSelector .= "bankOptions['" . $bank->getBankId() . "'] = [];\n";
-                    $bankSelector .= "bankOptions['" . $bank->getBankId() . "'].push('<option value=\"" . $bank->getBankId(). "\">" . $bank->getType() . "</option>')\n";
+                    $bankSelector .= "bankOptions['" . $bank->getBankId() . "'].push('<option value=\"" . $bank->getBankId(). "\">" . $bank->getType() . "</option>');\n";
                 } else {
                     $bankSelector .= "bankOptions['" . $bank->getParent() . "'].push('<option value=\"" . $bank->getBankId(). "\">" . $bank->getType() . "</option>');\n";
                 }
@@ -376,7 +376,7 @@ EOD;
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.4.1');
+            $configuration->setPlatform('woocommerce-khipu', '2.4.2');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -472,7 +472,7 @@ EOD;
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.4.1');
+                $configuration->setPlatform('woocommerce-khipu', '2.4.2');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
