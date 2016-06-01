@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 2.4.3
+ * Version: 2.4.4
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -200,7 +200,7 @@ function woocommerce_khipu_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.4.3');
+            $configuration->setPlatform('woocommerce-khipu', '2.4.4');
 
             $client = new Khipu\ApiClient($configuration);
             $banks = new Khipu\Client\BanksApi($client);
@@ -376,7 +376,7 @@ EOD;
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.4.3');
+            $configuration->setPlatform('woocommerce-khipu', '2.4.4');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -472,7 +472,7 @@ EOD;
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.4.3');
+                $configuration->setPlatform('woocommerce-khipu', '2.4.4');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);

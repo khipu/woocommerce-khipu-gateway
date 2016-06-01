@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 2.4.3
+ * Version: 2.4.4
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -233,7 +233,7 @@ function woocommerce_khipubacs_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('opencart-khipu', '2.4.3');
+            $configuration->setPlatform('woocommerce-khipu', '2.4.4');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -296,7 +296,7 @@ function woocommerce_khipubacs_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.4.3');
+                $configuration->setPlatform('woocommerce-khipu', '2.4.4');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
@@ -305,7 +305,7 @@ function woocommerce_khipubacs_init()
 
                 $order = $this->get_khipubacs_order($paymentsResponse->getCustom(), $paymentsResponse->getTransactionId());
 
-                if($paymentsResponse->getAmount() == floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', ''))
+                if($paymentsResponse->getStatus() == 'done' && $paymentsResponse->getAmount() == floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', ''))
                     && $paymentsResponse->getCurrency() == $order->get_order_currency()) {
                     return $order;
                 }
