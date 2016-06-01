@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 2.4.2
+ * Version: 2.4.3
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -233,7 +233,7 @@ function woocommerce_khipubacs_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('opencart-khipu', '2.4.2');
+            $configuration->setPlatform('opencart-khipu', '2.4.3');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -296,7 +296,7 @@ function woocommerce_khipubacs_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.4.2');
+                $configuration->setPlatform('woocommerce-khipu', '2.4.3');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
