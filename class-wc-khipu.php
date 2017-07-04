@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 2.4.5
+ * Version: 2.5.0
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -102,7 +102,7 @@ function woocommerce_khipu_init()
         function is_valid_for_use()
         {
             if (!in_array(get_woocommerce_currency(),
-                apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP', 'BOB')))
+                apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP')))
             ) {
                 return false;
             }
@@ -165,12 +165,12 @@ function woocommerce_khipu_init()
                     'description' => __('Payment method description that the customer will see on your checkout.',
                         'woocommerce'),
                     'default' => __('khipu es una aplicación simple y segura para pagar con'
-                        . 'tu banco a través de una transferencia, evita errores'
-                        . 'al escribir datos y brinda protección adicional contra'
-                        . 'algunos tipos de ataque, como lo son el Phishing y la'
-                        . 'clonación de datos. Si no has instalado la aplicación,'
-                        . 'la página de pago te ayudará a instalarla. ESTA ES LA'
-                        . 'OPCIÓN RECOMENDADA.', 'woocommerce')
+                        . ' tu banco a través de una transferencia, evita errores'
+                        . ' al escribir datos y brinda protección adicional contra'
+                        . ' algunos tipos de ataque, como lo son el Phishing y la'
+                        . ' clonación de datos. Si no has instalado la aplicación,'
+                        . ' la página de pago te ayudará a instalarla. ESTA ES LA'
+                        . ' OPCIÓN RECOMENDADA.', 'woocommerce')
                 ),
                 'receiver_id' => array(
                     'title' => __('Id de cobrador', 'woocommerce'),
@@ -200,7 +200,7 @@ function woocommerce_khipu_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.4.5');
+            $configuration->setPlatform('woocommerce-khipu', '2.5.0');
 
             $client = new Khipu\ApiClient($configuration);
             $banks = new Khipu\Client\BanksApi($client);
@@ -375,7 +375,7 @@ EOD;
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.4.5');
+            $configuration->setPlatform('woocommerce-khipu', '2.5.0');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -471,7 +471,7 @@ EOD;
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.4.5');
+                $configuration->setPlatform('woocommerce-khipu', '2.5.0');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
@@ -567,7 +567,6 @@ EOD;
 
     function woocommerce_add_khipu_currencies( $currencies ) {
         $currencies['CLP'] = __( 'Peso Chileno', 'woocommerce' );
-        $currencies['BOB'] = __( 'Peso Boliviano', 'woocommerce' );
         return $currencies;
     }
 
@@ -576,7 +575,6 @@ EOD;
     function woocommerce_add_khipu_currencies_symbol( $currency_symbol, $currency ) {
         switch( $currency ) {
             case 'CLP': $currency_symbol = '$'; break;
-            case 'BOB': $currency_symbol = 'Bs'; break;
         }
         return $currency_symbol;
     }
