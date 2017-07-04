@@ -116,8 +116,7 @@ function woocommerce_khipupayme_init()
         {
             ?>
             <h3><?php _e('khipu', 'woocommerce'); ?></h3>
-            <p><?php _e('khipu utiliza PayMe para que el pagador autorice el pago.',
-                    'woocommerce'); ?></p>
+            <p><?php _e('khipu utiliza PayMe para que el pagador autorice el pago.','woocommerce'); ?></p>
 
             <?php if ($this->is_valid_for_use()) : ?>
             <table class="form-table">
@@ -165,7 +164,7 @@ function woocommerce_khipupayme_init()
                     'type' => 'textarea',
                     'description' => __('Payment method description that the customer will see on your checkout.',
                         'woocommerce'),
-                    'default' => __('Paga con cualquier tarjeta de crédito o débito.')
+		    'default' => __('Paga con cualquier tarjeta de crédito o débito.')
                 ),
                 'receiver_id' => array(
                     'title' => __('Id de cobrador', 'woocommerce'),
