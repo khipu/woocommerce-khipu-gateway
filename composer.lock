@@ -4,21 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "9a57de4a144d901fb25cb871cebae3ef",
     "content-hash": "f81092061f974ec7afff284b8735422d",
     "packages": [
         {
             "name": "khipu/khipu-api-client",
-            "version": "2.5.0",
+            "version": "2.7.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/khipu/khipu-api-php-client.git",
-                "reference": "70f39914b8e6c0a8f7d7615da0bf68e638140fb8"
+                "reference": "3a914dd36de4a07d1bdf25ff43b9028bbda61122"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/khipu/khipu-api-php-client/zipball/70f39914b8e6c0a8f7d7615da0bf68e638140fb8",
-                "reference": "70f39914b8e6c0a8f7d7615da0bf68e638140fb8",
+                "url": "https://api.github.com/repos/khipu/khipu-api-php-client/zipball/3a914dd36de4a07d1bdf25ff43b9028bbda61122",
+                "reference": "3a914dd36de4a07d1bdf25ff43b9028bbda61122",
                 "shasum": ""
             },
             "require": {
@@ -55,7 +54,7 @@
                 "php",
                 "sdk"
             ],
-            "time": "2015-11-24 14:33:56"
+            "time": "2016-07-11T18:53:07+00:00"
         }
     ],
     "packages-dev": [],

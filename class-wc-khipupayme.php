@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipupayme
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 2.5.0
+ * Version: 2.5.1
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -227,7 +227,7 @@ function woocommerce_khipupayme_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.5.0');
+            $configuration->setPlatform('woocommerce-khipu', '2.5.1');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -235,10 +235,10 @@ function woocommerce_khipupayme_init()
             try {
                 $createPaymentResponse = $payments->paymentsPost(
                     'Orden ' . $order->get_order_number() . ' - ' . get_bloginfo('name')
-                    , $order->get_order_currency()
+                    , $order->get_currency()
                     , number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', '')
                     , ltrim($order->get_order_number(), '#')
-                    , serialize(array($order_id, $order->order_key))
+                    , serialize(array($order_id, $order->get_order_key()))
                     , implode(', ', $item_names)
                     , null
                     , $this->get_return_url($order)
@@ -249,7 +249,7 @@ function woocommerce_khipupayme_init()
                     , null
                     , null
                     , null
-                    , $order->billing_email
+                    , $order->get_billing_email()
                     , null
                     , null
                     , null
@@ -290,7 +290,7 @@ function woocommerce_khipupayme_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.5.0');
+                $configuration->setPlatform('woocommerce-khipu', '2.5.1');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
@@ -300,7 +300,7 @@ function woocommerce_khipupayme_init()
                 $order = $this->get_khipupayme_order($paymentsResponse->getCustom(), $paymentsResponse->getTransactionId());
 
                 if($paymentsResponse->getStatus() == 'done' && $paymentsResponse->getAmount() == floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', ''))
-                    && $paymentsResponse->getCurrency() == $order->get_order_currency()) {
+                    && $paymentsResponse->getCurrency() == $order->get_currency()) {
                     return $order;
                 }
             }
@@ -333,7 +333,7 @@ function woocommerce_khipupayme_init()
          */
         function successful_request($order)
         {
-            if ($order->status == 'completed') {
+            if ($order->get_status() == 'completed') {
                 exit;
             }
             $order->add_order_note(__('Pago con khipupayme verificado', 'woocommerce'));

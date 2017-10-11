@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu
  * Plugin URI: https://khipu.com
  * Description: khipu payment gateway for woocommerce
- * Version: 2.5.0
+ * Version: 2.5.1
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -200,7 +200,7 @@ function woocommerce_khipu_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.5.0');
+            $configuration->setPlatform('woocommerce-khipu', '2.5.1');
 
             $client = new Khipu\ApiClient($configuration);
             $banks = new Khipu\Client\BanksApi($client);
@@ -375,7 +375,7 @@ EOD;
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.5.0');
+            $configuration->setPlatform('woocommerce-khipu', '2.5.1');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -383,10 +383,10 @@ EOD;
             try {
                 $createPaymentResponse = $payments->paymentsPost(
                     'Orden ' . $order->get_order_number() . ' - ' . get_bloginfo('name')
-                    , $order->get_order_currency()
+                    , $order->get_currency()
                     , number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', '')
                     , ltrim($order->get_order_number(), '#')
-                    , serialize(array($order_id, $order->order_key))
+                    , serialize(array($order_id, $order->get_order_key()))
                     , implode(', ', $item_names)
                     , $_REQUEST['bank-id']
                     , $this->get_return_url($order)
@@ -397,7 +397,7 @@ EOD;
                     , null
                     , null
                     , null
-                    , $order->billing_email
+                    , $order->get_billing_email()
                     , null
                     , null
                     , null
@@ -471,7 +471,7 @@ EOD;
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.5.0');
+                $configuration->setPlatform('woocommerce-khipu', '2.5.1');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
@@ -481,7 +481,7 @@ EOD;
                 $order = $this->get_khipu_order($paymentsResponse->getCustom(), $paymentsResponse->getTransactionId());
 
                 if($paymentsResponse->getStatus() == 'done' && $paymentsResponse->getAmount() == floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', ''))
-                    && $paymentsResponse->getCurrency() == $order->get_order_currency()) {
+                    && $paymentsResponse->getCurrency() == $order->get_currency()) {
                     return $order;
                 }
             }
@@ -514,7 +514,7 @@ EOD;
          */
         function successful_request($order)
         {
-            if ($order->status == 'completed') {
+            if ($order->get_status() == 'completed') {
                 exit;
             }
             $order->add_order_note(__('Pago con khipu verificado', 'woocommerce'));
