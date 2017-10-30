@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered direct transfer payment gateway for woocommerce
- * Version: 2.5.1
+ * Version: 2.5.2
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -233,33 +233,27 @@ function woocommerce_khipubacs_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.5.1');
+            $configuration->setPlatform('woocommerce-khipu', '2.5.2');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
+
+            $options = array(
+                'transaction_id' => ltrim($order->get_order_number(), '#')
+                , 'custom' => serialize(array($order_id, $order->get_order_key()))
+                , 'body' => implode(', ', $item_names)
+                , 'return_url' => $this->get_return_url($order)
+                , 'notify_url' => $this->notify_url
+                , 'notify_api_version' => '1.3'
+                , 'payer_email' => $order->get_billing_email()
+            );
 
             try {
                 $createPaymentResponse = $payments->paymentsPost(
                     'Orden ' . $order->get_order_number() . ' - ' . get_bloginfo('name')
                     , $order->get_currency()
                     , number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2 )), '.', '')
-                    , ltrim($order->get_order_number(), '#')
-                    , serialize(array($order_id, $order->get_order_key()))
-                    , implode(', ', $item_names)
-                    , null
-                    , $this->get_return_url($order)
-                    , null
-                    , null
-                    , $this->notify_url
-                    , '1.3'
-                    , null
-                    , null
-                    , null
-                    , $order->get_billing_email()
-                    , null
-                    , null
-                    , null
-                    , null
+                    , $options
                 );
             } catch(\Khipu\ApiException $e) {
                 return $this->comm_error($e->getResponseObject());
@@ -296,7 +290,7 @@ function woocommerce_khipubacs_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.5.1');
+                $configuration->setPlatform('woocommerce-khipu', '2.5.2');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
