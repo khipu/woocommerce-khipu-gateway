@@ -1,17 +1,17 @@
 [
     {
         "name": "khipu/khipu-api-client",
-        "version": "2.7.1",
-        "version_normalized": "2.7.1.0",
+        "version": "2.8.2",
+        "version_normalized": "2.8.2.0",
         "source": {
             "type": "git",
             "url": "https://github.com/khipu/khipu-api-php-client.git",
-            "reference": "3a914dd36de4a07d1bdf25ff43b9028bbda61122"
+            "reference": "9803858fa8df38b4c91b641173c47a4ca1951051"
         },
         "dist": {
             "type": "zip",
-            "url": "https://api.github.com/repos/khipu/khipu-api-php-client/zipball/3a914dd36de4a07d1bdf25ff43b9028bbda61122",
-            "reference": "3a914dd36de4a07d1bdf25ff43b9028bbda61122",
+            "url": "https://api.github.com/repos/khipu/khipu-api-php-client/zipball/9803858fa8df38b4c91b641173c47a4ca1951051",
+            "reference": "9803858fa8df38b4c91b641173c47a4ca1951051",
             "shasum": ""
         },
         "require": {
@@ -25,7 +25,7 @@
             "satooshi/php-coveralls": "~0.6.1",
             "squizlabs/php_codesniffer": "~2.0"
         },
-        "time": "2016-07-11T18:53:07+00:00",
+        "time": "2019-03-01T19:06:35+00:00",
         "type": "library",
         "installation-source": "dist",
         "autoload": {
