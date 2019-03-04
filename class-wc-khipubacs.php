@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
- * Description: khipu powered direct transfer payment gateway for woocommerce
+ * Description: khipu powered bacs payment gateway for woocommerce
  * Version: 2.5.2
  * Author: khipu
  * Author URI: https://khipu.com
