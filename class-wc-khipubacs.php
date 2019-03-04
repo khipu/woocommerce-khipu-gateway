@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipubacs
  * Plugin URI: https://khipu.com
  * Description: khipu powered bacs payment gateway for woocommerce
- * Version: 2.5.2
+ * Version: 2.6.0
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -233,7 +233,7 @@ function woocommerce_khipubacs_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.5.2');
+            $configuration->setPlatform('woocommerce-khipu', '2.6.0');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -290,7 +290,7 @@ function woocommerce_khipubacs_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.5.2');
+                $configuration->setPlatform('woocommerce-khipu', '2.6.0');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
