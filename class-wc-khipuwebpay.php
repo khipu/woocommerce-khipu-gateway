@@ -164,7 +164,7 @@ function woocommerce_khipuwebpay_init()
                     'type' => 'textarea',
                     'description' => __('Payment method description that the customer will see on your checkout.',
                         'woocommerce'),
-		    'default' => __('Paga con cualquier tarjeta de crédito o débito.')
+		    'default' => __('Paga con cualquier Tarjeta de Crédito o RedCompra.')
                 ),
                 'receiver_id' => array(
                     'title' => __('Id de cobrador', 'woocommerce'),
@@ -253,7 +253,7 @@ function woocommerce_khipuwebpay_init()
                 return $this->comm_error($e->getResponseObject());
             }
 
-            wp_redirect($createPaymentResponse->getPaymentUrl());
+            wp_redirect($createPaymentResponse->getWebpayUrl());
             return;
 
         }
