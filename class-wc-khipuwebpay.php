@@ -70,7 +70,7 @@ function woocommerce_khipuwebpay_init()
             $this->id = 'khipuwebpay';
             $this->icon = 'https://bi.khipu.com/150x50/capsule/webpay/transparent/'.$this->get_option('receiver_id');
             $this->has_fields = false;
-            $this->method_title = __('khipu PayMe', 'woocommerce');
+            $this->method_title = __('khipu WebPay', 'woocommerce');
             $this->notify_url = add_query_arg('wc-api', 'WC_Gateway_' . $this->id, home_url('/'));
 
             // Load the settings and init variables.
@@ -116,7 +116,7 @@ function woocommerce_khipuwebpay_init()
         {
             ?>
             <h3><?php _e('khipu', 'woocommerce'); ?></h3>
-            <p><?php _e('khipu utiliza PayMe para que el pagador autorice el pago.','woocommerce'); ?></p>
+            <p><?php _e('khipu utiliza WebPay para que el pagador autorice el pago.','woocommerce'); ?></p>
 
             <?php if ($this->is_valid_for_use()) : ?>
             <table class="form-table">
@@ -156,7 +156,7 @@ function woocommerce_khipuwebpay_init()
                     'type' => 'text',
                     'description' => __('This controls the title which the user sees during checkout.',
                         'woocommerce'),
-                    'default' => __('khipu PayMe', 'woocommerce'),
+                    'default' => __('khipu WebPay', 'woocommerce'),
                     'desc_tip' => true
                 ),
                 'description' => array(
