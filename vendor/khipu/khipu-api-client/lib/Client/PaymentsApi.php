@@ -185,7 +185,10 @@ class PaymentsApi
         foreach ($keys as $key) {
           $toSign .= "&$key=" . $encoded[$key];
         }
-
+        if ($_tempBody != null){
+          $json_body = json_encode($this->apiClient->getSerializer()->sanitizeForSerialization($_tempBody));
+          $toSign .="&".$json_body;
+        }
         $hash = hash_hmac('sha256', $toSign , $this->apiClient->getConfig()->getSecret()); //sha1($concatenated . "&secret=" . $secret) . "\n";
 
         $headerParams['Authorization'] = $this->apiClient->getConfig()->getReceiverId() . ":" . $hash;
@@ -261,6 +264,9 @@ class PaymentsApi
      * - string 'responsible_user_email' Correo electrónico del responsable de este cobro, debe corresponder a un usuario khipu con permisos para cobrar usando esta cuenta de cobro (opcional)
      * - string 'fixed_payer_personal_identifier' Identificador personal. Si se especifica, solo podrá ser pagado usando ese identificador (opcional)
      * - double 'integrator_fee' Comisión para el integrador. Sólo es válido si la cuenta de cobro tiene una cuenta de integrador asociada (opcional)
+     * - bool 'collect_account_uuid' Para cuentas de cobro con más cuenta propia. Permite elegir la cuenta donde debe ocurrir la transferencia. (opcional)
+     * - string 'confirm_timeout_date' Fecha de rendición del cobro. Es también la fecha final para poder reembolsar el cobro. Formato ISO-8601. Ej: 2017-03-01T13:00:00Z (opcional)
+     * - string 'mandatory_payment_method' Si se especifica, el cobro sólo se podrá pagar utilizando ese medio de pago. El valor para el campo de obtiene consultando el endpoint &#39;Consulta medios de pago disponibles&#39;. (opcional)
      * @return \Khipu\Model\PaymentsCreateResponse
      * @throws \Khipu\ApiException on non-2xx response
      */
@@ -377,6 +383,15 @@ class PaymentsApi
           }// form params
           if (array_key_exists("integrator_fee", $options) && $options["integrator_fee"] != null) {
             $formParams['integrator_fee'] = $this->apiClient->getSerializer()->toFormValue($options["integrator_fee"]);
+          }// form params
+          if (array_key_exists("collect_account_uuid", $options) && $options["collect_account_uuid"] != null) {
+            $formParams['collect_account_uuid'] = $this->apiClient->getSerializer()->toFormValue($options["collect_account_uuid"]);
+          }// form params
+          if (array_key_exists("confirm_timeout_date", $options) && $options["confirm_timeout_date"] != null) {
+            $formParams['confirm_timeout_date'] = $this->apiClient->getSerializer()->toFormValue($options["confirm_timeout_date"]);
+          }// form params
+          if (array_key_exists("mandatory_payment_method", $options) && $options["mandatory_payment_method"] != null) {
+            $formParams['mandatory_payment_method'] = $this->apiClient->getSerializer()->toFormValue($options["mandatory_payment_method"]);
           }
         }
 
@@ -414,7 +429,10 @@ class PaymentsApi
         foreach ($keys as $key) {
           $toSign .= "&$key=" . $encoded[$key];
         }
-
+        if ($_tempBody != null){
+          $json_body = json_encode($this->apiClient->getSerializer()->sanitizeForSerialization($_tempBody));
+          $toSign .="&".$json_body;
+        }
         $hash = hash_hmac('sha256', $toSign , $this->apiClient->getConfig()->getSecret()); //sha1($concatenated . "&secret=" . $secret) . "\n";
 
         $headerParams['Authorization'] = $this->apiClient->getConfig()->getReceiverId() . ":" . $hash;
@@ -561,7 +579,10 @@ class PaymentsApi
         foreach ($keys as $key) {
           $toSign .= "&$key=" . $encoded[$key];
         }
-
+        if ($_tempBody != null){
+          $json_body = json_encode($this->apiClient->getSerializer()->sanitizeForSerialization($_tempBody));
+          $toSign .="&".$json_body;
+        }
         $hash = hash_hmac('sha256', $toSign , $this->apiClient->getConfig()->getSecret()); //sha1($concatenated . "&secret=" . $secret) . "\n";
 
         $headerParams['Authorization'] = $this->apiClient->getConfig()->getReceiverId() . ":" . $hash;
@@ -708,7 +729,160 @@ class PaymentsApi
         foreach ($keys as $key) {
           $toSign .= "&$key=" . $encoded[$key];
         }
+        if ($_tempBody != null){
+          $json_body = json_encode($this->apiClient->getSerializer()->sanitizeForSerialization($_tempBody));
+          $toSign .="&".$json_body;
+        }
+        $hash = hash_hmac('sha256', $toSign , $this->apiClient->getConfig()->getSecret()); //sha1($concatenated . "&secret=" . $secret) . "\n";
 
+        $headerParams['Authorization'] = $this->apiClient->getConfig()->getReceiverId() . ":" . $hash;
+
+        
+        
+        // make the API Call
+        try
+        {
+            list($response, $httpHeader) = $this->apiClient->callApi(
+                $resourcePath, $method,
+                $queryParams, $httpBody,
+                $headerParams, '\Khipu\Model\SuccessResponse'
+            );
+            
+            if (!$response) {
+                return null;
+            }
+
+            return $this->apiClient->getSerializer()->deserialize($response, '\Khipu\Model\SuccessResponse', $httpHeader);
+            
+        } catch (ApiException $e) {
+            switch ($e->getCode()) { 
+            case 200:
+                $data = $this->apiClient->getSerializer()->deserialize($e->getResponseBody(), '\Khipu\Model\SuccessResponse', $e->getResponseHeaders());
+                $e->setResponseObject($data);
+                break;
+            case 400:
+                $data = $this->apiClient->getSerializer()->deserialize($e->getResponseBody(), '\Khipu\Model\ValidationError', $e->getResponseHeaders());
+                $e->setResponseObject($data);
+                break;
+            case 403:
+                $data = $this->apiClient->getSerializer()->deserialize($e->getResponseBody(), '\Khipu\Model\AuthorizationError', $e->getResponseHeaders());
+                $e->setResponseObject($data);
+                break;
+            case 503:
+                $data = $this->apiClient->getSerializer()->deserialize($e->getResponseBody(), '\Khipu\Model\ServiceError', $e->getResponseHeaders());
+                $e->setResponseObject($data);
+                break;
+            }
+  
+            throw $e;
+        }
+        
+        return null;
+        
+    }
+    
+    /**
+     * paymentsIdConfirmPost
+     *
+     * Confirmar el pago.
+     *
+     * @param string $id Identificador del pago (requerido)
+     * @param array $options Arreglo de parámetros opcionales (opcional)
+     * @return \Khipu\Model\SuccessResponse
+     * @throws \Khipu\ApiException on non-2xx response
+     */
+    public function paymentsIdConfirmPost($id, $options = null)
+    {
+        
+        // verify the required parameter 'id' is set
+        if ($id === null) {
+            throw new \InvalidArgumentException('Missing the required parameter $id when calling paymentsIdConfirmPost');
+        }
+  
+        // parse inputs
+        $resourcePath = "/payments/{id}/confirm";
+        $resourcePath = str_replace("{format}", "json", $resourcePath);
+        $method = "POST";
+        $httpBody = '';
+        $queryParams = array();
+        $headerParams = array();
+        $formParams = array();
+        $_header_accept = ApiClient::selectHeaderAccept(array('application/json'));
+        if (!is_null($_header_accept)) {
+            $headerParams['Accept'] = $_header_accept;
+        }
+        $headerParams['Content-Type'] = ApiClient::selectHeaderContentType(array('application/x-www-form-urlencoded'));
+  
+        
+
+        if( $options != null ) {
+          
+        }
+
+
+        
+
+        if( $options != null ) {
+            
+        }
+
+
+        // path params
+            $resourcePath = str_replace(
+                "{" . "id" . "}",
+                $this->apiClient->getSerializer()->toPathValue($id),
+                $resourcePath
+            );
+        
+
+        if( $options != null ) {
+            
+        }
+
+        
+
+        if( $options != null ) {
+          
+        }
+
+        
+
+        if( $options != null ) {
+            
+        }
+  
+        // for model (json/xml)
+        if (isset($_tempBody)) {
+            $httpBody = $_tempBody; // $_tempBody is the method argument, if present
+        } else if (count($formParams) > 0) {
+            $httpBody = $formParams; // for HTTP post (form)
+        }
+        
+        
+        
+        
+        $encoded = array();
+
+        foreach ($formParams as $key => $value) {
+          $encoded[rawurlencode($key)] = rawurlencode($formParams[$key]);
+        }
+        foreach ($queryParams as $key => $value) {
+          $encoded[rawurlencode($key)] = rawurlencode($queryParams[$key]);
+        }
+
+        $keys = array_keys($encoded);
+        sort($keys);
+
+        $url = $this->apiClient->getConfig()->getHost() . $resourcePath;
+
+        $toSign = "$method&" . rawurlencode($url);
+        foreach ($keys as $key) {
+          $toSign .= "&$key=" . $encoded[$key];
+        }
+        if ($_tempBody != null){
+          $json_body = json_encode($this->apiClient->getSerializer()->sanitizeForSerialization($_tempBody));
+          $toSign .="&".$json_body;
+        }
         $hash = hash_hmac('sha256', $toSign , $this->apiClient->getConfig()->getSecret()); //sha1($concatenated . "&secret=" . $secret) . "\n";
 
         $headerParams['Authorization'] = $this->apiClient->getConfig()->getReceiverId() . ":" . $hash;
@@ -859,7 +1033,10 @@ class PaymentsApi
         foreach ($keys as $key) {
           $toSign .= "&$key=" . $encoded[$key];
         }
-
+        if ($_tempBody != null){
+          $json_body = json_encode($this->apiClient->getSerializer()->sanitizeForSerialization($_tempBody));
+          $toSign .="&".$json_body;
+        }
         $hash = hash_hmac('sha256', $toSign , $this->apiClient->getConfig()->getSecret()); //sha1($concatenated . "&secret=" . $secret) . "\n";
 
         $headerParams['Authorization'] = $this->apiClient->getConfig()->getReceiverId() . ":" . $hash;
