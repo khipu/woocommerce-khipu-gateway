@@ -7,8 +7,8 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin Name: WooCommerce khipuwebpay
  * Plugin URI: https://khipu.com
- * Description: khipu powered webpay payment gateway for woocommerce
- * Version: 2.6.0
+ * Description: khipu - Webpay para woocommerce
+ * Version: 2.7.0
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -227,7 +227,7 @@ function woocommerce_khipuwebpay_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.6.0');
+            $configuration->setPlatform('woocommerce-khipu', '2.7.0');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -284,7 +284,7 @@ function woocommerce_khipuwebpay_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.6.0');
+                $configuration->setPlatform('woocommerce-khipu', '2.7.0');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
