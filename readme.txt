@@ -4,7 +4,7 @@ Donate link:
 Tags: payment gateway, khipu, woocommerce, chile
 Requires at least: 3.3
 Tested up to: 4.1
-Stable tag: 2.8.1
+Stable tag: 2.9
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,6 +31,7 @@ No hay preguntas aún.
 3. https://s3.amazonaws.com/static.khipu.com/id-cobrador.png
 
 == Changelog ==
+2.9 Cambio de nombre en configuración de woocommerce
 2.8.1 Corrección de URL de cancelación para permitir al usuario volver al carro
 2.8 Agrega URL de cancelación para permitir al usuario volver al carro
 2.7 Mejoras de UX

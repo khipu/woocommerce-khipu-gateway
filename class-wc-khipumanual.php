@@ -5,10 +5,10 @@ if (!defined('ABSPATH')) {
 } // Exit if accessed directly
 
 /**
- * Plugin Name: WooCommerce khipumanual
- * Plugin URI: https://khipu.com
+ * Plugin Name: khipu Chile - Transferenica manual para woocommerce
+ * Plugin URI: https://khipu.com/page/woocommerce
  * Description: khipu - Transferencia manual para woocommerce
- * Version: 2.8.1
+ * Version: 2.9
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -233,7 +233,7 @@ function woocommerce_khipumanual_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.8.1');
+            $configuration->setPlatform('woocommerce-khipu', '2.9');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -291,7 +291,7 @@ function woocommerce_khipumanual_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.8.1');
+                $configuration->setPlatform('woocommerce-khipu', '2.9');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
