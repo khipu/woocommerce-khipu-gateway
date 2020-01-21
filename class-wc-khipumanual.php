@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipumanual
  * Plugin URI: https://khipu.com
  * Description: khipu - Transferencia manual para woocommerce
- * Version: 2.7.0
+ * Version: 2.8
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -233,7 +233,7 @@ function woocommerce_khipumanual_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.7.0');
+            $configuration->setPlatform('woocommerce-khipu', '2.8');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -290,7 +290,7 @@ function woocommerce_khipumanual_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.7.0');
+                $configuration->setPlatform('woocommerce-khipu', '2.8');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
