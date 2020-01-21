@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipuwebpay
  * Plugin URI: https://khipu.com
  * Description: khipu - Webpay para woocommerce
- * Version: 2.8
+ * Version: 2.8.1
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -227,7 +227,7 @@ function woocommerce_khipuwebpay_init()
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '2.8');
+            $configuration->setPlatform('woocommerce-khipu', '2.8.1');
 
             $client = new Khipu\ApiClient($configuration);
             $payments = new Khipu\Client\PaymentsApi($client);
@@ -237,6 +237,7 @@ function woocommerce_khipuwebpay_init()
             , 'custom' => serialize(array($order_id, $order->get_order_key()))
             , 'body' => implode(', ', $item_names)
             , 'return_url' => $this->get_return_url($order)
+            , 'cancel_url' => $order->get_checkout_payment_url()
             , 'notify_url' => $this->notify_url
             , 'notify_api_version' => '1.3'
             , 'payer_email' => $order->get_billing_email()
@@ -284,7 +285,7 @@ function woocommerce_khipuwebpay_init()
                 $configuration = new Khipu\Configuration();
                 $configuration->setSecret($this->secret);
                 $configuration->setReceiverId($this->receiver_id);
-                $configuration->setPlatform('woocommerce-khipu', '2.8');
+                $configuration->setPlatform('woocommerce-khipu', '2.8.1');
 
                 $client = new Khipu\ApiClient($configuration);
                 $payments = new Khipu\Client\PaymentsApi($client);
