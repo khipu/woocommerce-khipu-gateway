@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "khipu/khipu-api-client",
-            "version": "2.8.2",
+            "version": "2.9.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/khipu/khipu-api-php-client.git",
-                "reference": "9803858fa8df38b4c91b641173c47a4ca1951051"
+                "reference": "bef36baf4026884b45e5849a7875f6b5e9c462a5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/khipu/khipu-api-php-client/zipball/9803858fa8df38b4c91b641173c47a4ca1951051",
-                "reference": "9803858fa8df38b4c91b641173c47a4ca1951051",
+                "url": "https://api.github.com/repos/khipu/khipu-api-php-client/zipball/bef36baf4026884b45e5849a7875f6b5e9c462a5",
+                "reference": "bef36baf4026884b45e5849a7875f6b5e9c462a5",
                 "shasum": ""
             },
             "require": {
@@ -54,7 +54,7 @@
                 "php",
                 "sdk"
             ],
-            "time": "2019-03-01T19:06:35+00:00"
+            "time": "2019-05-27T14:21:10+00:00"
         }
     ],
     "packages-dev": [],
