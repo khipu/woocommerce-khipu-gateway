@@ -44,7 +44,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         $configuration->setSecret($this->secret);
         $configuration->setReceiverId($this->receiver_id);
         $configuration->setPlatform('woocommerce-khipu', '3.0');
-        $configuration->setDebug(true);
+//        $configuration->setDebug(true);
 
         $client = new Khipu\ApiClient($configuration);
         $payments = new Khipu\Client\PaymentsApi($client);
