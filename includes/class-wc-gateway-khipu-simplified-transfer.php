@@ -28,6 +28,7 @@ class WC_Gateway_khipu_simplified_transfer extends WC_Gateway_khipu_abstract
         $this->receiver_id = get_option('woocommerce_gateway_khipu_receiver_id');
         $this->secret = get_option('woocommerce_gateway_khipu_secret');
         $this->icon = $this->get_payment_method_icon('SIMPLIFIED_TRANSFER');
+        $this->after_payment_status = get_option('woocommerce_gateway_khipu_after_payment_status');
 
         add_action('woocommerce_receipt_' . $this->id, array($this, 'receipt_page'));
         add_action('woocommerce_update_options_payment_gateways_' . $this->id,

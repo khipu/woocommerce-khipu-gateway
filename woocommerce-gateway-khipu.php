@@ -7,8 +7,8 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin Name: WooCommerce khipu Gateway
  * Plugin URI: https://khipu.com/page/woocommerce
- * Description: Acepte pagos con transferencia, tarjetas de crédito o débito procesados por khipu
- * Version: 3.0
+ * Description: Acepte pagos con transferencia procesadas por khipu
+ * Version: 3.1
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -63,18 +63,14 @@ function woocommerce_gateway_khipu_init()
      **/
     require_once dirname( __FILE__ ) . '/includes/abstract-wc-gateway-khipu.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu.php';
-    require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-webpay.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-simplified-transfer.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-regular-transfer.php';
-    require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-payme.php';
 
     function woocommerce_gateway_khipu_add_gateways($methods)
     {
         $methods[] = 'WC_Gateway_khipu';
         $methods[] = 'WC_Gateway_khipu_simplified_transfer';
         $methods[] = 'WC_Gateway_khipu_regular_transfer';
-        $methods[] = 'WC_Gateway_khipu_webpay';
-        $methods[] = 'WC_Gateway_khipu_payme';
         return $methods;
     }
 
@@ -84,7 +80,6 @@ function woocommerce_gateway_khipu_init()
 
     function woocommerce_gateway_khipu_add_currencies( $currencies ) {
         $currencies['CLP'] = __( 'Peso Chileno', 'woocommerce' );
-        $currencies['BOB'] = __( 'Boliviano', 'woocommerce' );
         return $currencies;
     }
 
@@ -93,7 +88,6 @@ function woocommerce_gateway_khipu_init()
     function woocommerce_gateway_khipu_add_currencies_symbol( $currency_symbol, $currency ) {
         switch( $currency ) {
             case 'CLP': $currency_symbol = '$'; break;
-            case 'BOB': $currency_symbol = 'Bs'; break;
         }
         return $currency_symbol;
     }

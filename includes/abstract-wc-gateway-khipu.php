@@ -43,7 +43,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         $configuration = new Khipu\Configuration();
         $configuration->setSecret($this->secret);
         $configuration->setReceiverId($this->receiver_id);
-        $configuration->setPlatform('woocommerce-khipu', '3.0');
+        $configuration->setPlatform('woocommerce-khipu', '3.1');
 //        $configuration->setDebug(true);
 
         $client = new Khipu\ApiClient($configuration);
@@ -89,7 +89,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         $configuration = new Khipu\Configuration();
         $configuration->setSecret($this->secret);
         $configuration->setReceiverId($this->receiver_id);
-        $configuration->setPlatform('woocommerce-khipu', '3.0');
+        $configuration->setPlatform('woocommerce-khipu', '3.1');
 
         $client = new Khipu\ApiClient($configuration);
         $payments = new Khipu\Client\PaymentsApi($client);
@@ -144,6 +144,10 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             }
             $order->add_order_note(sprintf(__('Pago verificado con código único de verificación khipu %s', 'woocommerce-gateway-khipu'), $paymentResponse->getPaymentId()));
             $order->payment_complete($paymentResponse->getPaymentId());
+            $defined_status = get_option('woocommerce_gateway_khipu_after_payment_status');
+            if ($defined_status) {
+                $order->update_status($defined_status);
+            }
             exit('Notification processed');
         }
 
