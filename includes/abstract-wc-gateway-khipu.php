@@ -43,7 +43,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         $configuration = new Khipu\Configuration();
         $configuration->setSecret($this->secret);
         $configuration->setReceiverId($this->receiver_id);
-        $configuration->setPlatform('woocommerce-khipu', '3.1');
+        $configuration->setPlatform('woocommerce-khipu', '3.2');
 //        $configuration->setDebug(true);
 
         $client = new Khipu\ApiClient($configuration);
@@ -51,7 +51,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 
 
         $options = array(
-            'transaction_id' => ltrim($order->get_order_number(), '#')
+          'transaction_id' => ltrim($order->get_order_number(), '#')
         , 'custom' => serialize(array($order_id, $order->get_order_key()))
         , 'body' => implode(', ', $item_names)
         , 'return_url' => $this->get_return_url($order)
@@ -144,13 +144,12 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             }
             $order->add_order_note(sprintf(__('Pago verificado con código único de verificación khipu %s', 'woocommerce-gateway-khipu'), $paymentResponse->getPaymentId()));
             $order->payment_complete($paymentResponse->getPaymentId());
-            $defined_status = get_option('woocommerce_gateway_khipu_after_payment_status');
+            $defined_status = $this->get_option('after_payment_status');
             if ($defined_status) {
                 $order->update_status($defined_status);
             }
             exit('Notification processed');
         }
-
     }
 
     /**
@@ -186,21 +185,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
      */
     public function admin_options()
     {
-        if ($this->is_valid_for_use()) {
-            parent::admin_options();
-        } elseif (!$this->is_configured()) {
-            echo '<h2>' . esc_html($this->get_method_title());
-            wc_back_link(__('Return to payments', 'woocommerce'), admin_url('admin.php?page=wc-settings&tab=checkout'));
-            echo '</h2>';
-
-            ?>
-            <div class="inline error">
-                <p>
-                    <strong><?php esc_html_e('khipu no está configurado aún', 'woocommerce-gateway-khipu'); ?></strong>: <?php echo wp_kses_post(wpautop($this->get_method_description())); ?>
-                </p>
-            </div>
-            <?php
-        } elseif (!$this->is_valid_currency()) {
+        parent::admin_options();
+        if (!$this->is_valid_currency()) {
             ?>
             <div class="inline error">
                 <p>
@@ -208,20 +194,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
                 </p>
             </div>
             <?php
-        } elseif (!$this->is_payment_method_available()) {
-            echo '<h2>' . esc_html($this->get_method_title());
-            wc_back_link(__('Return to payments', 'woocommerce'), admin_url('admin.php?page=wc-settings&tab=checkout'));
-            echo '</h2>';
-
-            ?>
-            <div class="inline error">
-                <p>
-                    <strong><?php esc_html_e('Medio de pago desactivado', 'woocommerce-gateway-khipu'); ?></strong>: <?php echo esc_html_e('Debes activar este medio de pago en khipu.com', 'woocommerce-gateway-khipu'); ?>
-                </p>
-            </div>
-            <?php
         }
-
     }
 
     function get_payment_methods()
@@ -236,7 +209,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             $configuration = new Khipu\Configuration();
             $configuration->setSecret($this->secret);
             $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '3.0');
+            $configuration->setPlatform('woocommerce-khipu', '3.2');
 
             $client = new Khipu\ApiClient($configuration);
             $paymentMethodsApi = new Khipu\Client\PaymentMethodsApi($client);
@@ -278,6 +251,4 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             }
         }
     }
-
-
 }

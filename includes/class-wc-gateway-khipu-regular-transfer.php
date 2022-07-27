@@ -16,7 +16,7 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 
         $this->has_fields = false;
         $this->method_title = __('khipu transferencia normal', 'woocommerce-gateway-khipu');
-        $this->method_description = sprintf(__('Las configuraciones generales de khipu se hacen <a href="%s">aquí</a>.', 'woocommerce-gateway-khipu'), admin_url('admin.php?page=wc-settings&tab=checkout&section=khipu'));
+        $this->method_description = sprintf(__('Khipu pago con Transferencia Manual', 'woocommerce-gateway-khipu'), admin_url('admin.php?page=wc-settings&tab=checkout&section=khipu'));
 
         $this->notify_url = add_query_arg('wc-api', 'WC_Gateway_' . $this->id, home_url('/'));
 
@@ -25,10 +25,11 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
         $this->init_settings();
         $this->title = $this->get_option('title');
         $this->description = $this->get_option('description');
-        $this->receiver_id = get_option('woocommerce_gateway_khipu_receiver_id');
-        $this->secret = get_option('woocommerce_gateway_khipu_secret');
+        $this->receiver_id = $this->get_option('receiver_id');
+        $this->secret = $this->get_option('secret');
         $this->icon = $this->get_payment_method_icon('REGULAR_TRANSFER');
-        $this->after_payment_status = get_option('woocommerce_gateway_khipu_after_payment_status');
+        $this->after_payment_status = $this->get_option('after_payment_status');
+
 
         add_action('woocommerce_receipt_' . $this->id, array($this, 'receipt_page'));
         add_action('woocommerce_update_options_payment_gateways_' . $this->id,
@@ -66,7 +67,7 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 
     function is_valid_currency() {
         if (in_array(get_woocommerce_currency(),
-            apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP')))
+            apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP','ARS','ESP')))
         ) {
             return true;
         }
@@ -89,6 +90,33 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
                 'label' => sprintf(__('Habilita %s', 'woocommerce-gateway-khipu'), $this->method_title),
                 'default' => 'yes'
             ),
+            'receiver_id' => array(
+                'title' => __('Id de cobrador', 'woocommerce-gateway-khipu'),
+                'type' => 'text',
+                'description' => __('Ingrese su Id de cobrador. Se obtiene en https://khipu.com/merchant/profile ',
+                    'woocommerce-gateway-khipu'),
+                'default' => '',
+                'desc_tip' => true
+            ),
+            'secret' => array(
+                'title' => __('Llave', 'woocommerce-gateway-khipu'),
+                'type' => 'text',
+                'description' => __('Ingrese su llave secreta. Se obtiene en https://khipu.com/merchant/profile ',
+                    'woocommerce-gateway-khipu'),
+                'default' => '',
+                'desc_tip' => true
+            ),
+            'after_payment_status' => array(
+                'title' => __('Estado del pedido pagado.'),
+                'description' => __('Seleccione estado con el que desea dejar sus órdenes luego de pagadas.', 'woocommerce-gateway-khipu'),
+                'type' => 'select',
+                'options' => array(
+                    'wc-processing' => __('Procesando', 'woocommerce-gateway-khipu'),
+                    'wc-completed' => __('Completado', 'woocommerce-gateway-khipu'),
+                ),
+                'default' => 'wc-processing',
+                'desc_tip' => true
+            ),
             'title' => array(
                 'title' => __('Title', 'woocommerce'),
                 'type' => 'text',
@@ -105,7 +133,6 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
                 'default' => __('Paga con cualquier Banco chileno usando la página o app de tu Banco.', 'woocommerce-gateway-khipu')
             ),
         );
-
     }
 
 
@@ -130,8 +157,5 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
             echo $response;
         }
     }
-
-
-
 }
 
