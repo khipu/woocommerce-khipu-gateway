@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu Gateway
  * Plugin URI: https://khipu.com/page/woocommerce
  * Description: Acepte pagos con transferencia procesadas por khipu
- * Version: 3.2
+ * Version: 3.3
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -78,6 +78,8 @@ function woocommerce_gateway_khipu_init()
 
     function woocommerce_gateway_khipu_add_currencies( $currencies ) {
         $currencies['CLP'] = __( 'Peso Chileno', 'woocommerce' );
+        $currencies['ARS'] = __( 'Peso Argentino', 'woocommerce' );
+        $currencies['EUR'] = __( 'Euro', 'woocommerce' );
         return $currencies;
     }
 

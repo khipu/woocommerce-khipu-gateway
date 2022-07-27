@@ -48,7 +48,7 @@ class WC_Gateway_khipu_simplified_transfer extends WC_Gateway_khipu_abstract
     function is_valid_for_use()
     {
         if (!$this->is_configured()){
-            return true;
+            return false;
         }
         if (!$this->is_payment_method_available()) {
             return false;

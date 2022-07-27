@@ -185,21 +185,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
      */
     public function admin_options()
     {
-        if ($this->is_valid_for_use()) {
-            parent::admin_options();
-        } elseif (!$this->is_configured()) {
-            echo '<h2>' . esc_html($this->get_method_title());
-            wc_back_link(__('Return to payments', 'woocommerce'), admin_url('admin.php?page=wc-settings&tab=checkout'));
-            echo '</h2>';
-
-            ?>
-            <div class="inline error">
-                <p>
-                    <strong><?php esc_html_e('khipu no está configurado aún', 'woocommerce-gateway-khipu'); ?></strong>: <?php echo wp_kses_post(wpautop($this->get_method_description())); ?>
-                </p>
-            </div>
-            <?php
-        } elseif (!$this->is_valid_currency()) {
+        parent::admin_options();
+        if (!$this->is_valid_currency()) {
             ?>
             <div class="inline error">
                 <p>
@@ -207,20 +194,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
                 </p>
             </div>
             <?php
-       /* } elseif (!$this->is_payment_method_available()) {
-            echo '<h2>' . esc_html($this->get_method_title());
-            wc_back_link(__('Return to payments', 'woocommerce'), admin_url('admin.php?page=wc-settings&tab=checkout'));
-            echo '</h2>';
-
-            ?>
-            <div class="inline error">
-                <p>
-                    <strong><?php esc_html_e('Medio de pago desactivado', 'woocommerce-gateway-khipu'); ?></strong>: <?php echo esc_html_e('Debes activar este medio de pago en khipu.com', 'woocommerce-gateway-khipu'); ?>
-                </p>
-            </div>
-            <?php*/
         }
-
     }
 
     function get_payment_methods()

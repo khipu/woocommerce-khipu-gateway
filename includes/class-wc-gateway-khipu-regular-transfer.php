@@ -16,7 +16,7 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 
         $this->has_fields = false;
         $this->method_title = __('khipu transferencia normal', 'woocommerce-gateway-khipu');
-        $this->method_description = sprintf(__('Khipu pago con Transferencia manual', 'woocommerce-gateway-khipu'), admin_url('admin.php?page=wc-settings&tab=checkout&section=khipu'));
+        $this->method_description = sprintf(__('Khipu pago con Transferencia Manual', 'woocommerce-gateway-khipu'), admin_url('admin.php?page=wc-settings&tab=checkout&section=khipu'));
 
         $this->notify_url = add_query_arg('wc-api', 'WC_Gateway_' . $this->id, home_url('/'));
 
@@ -49,7 +49,7 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
     function is_valid_for_use()
     {
         if (!$this->is_configured()){
-            return true;
+            return false;
         }
         if (!$this->is_payment_method_available()) {
             return false;
@@ -67,7 +67,7 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 
     function is_valid_currency() {
         if (in_array(get_woocommerce_currency(),
-            apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP')))
+            apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP','ARS','ESP')))
         ) {
             return true;
         }
