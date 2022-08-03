@@ -66,7 +66,7 @@ class WC_Gateway_khipu_simplified_transfer extends WC_Gateway_khipu_abstract
 
     function is_valid_currency() {
         if (in_array(get_woocommerce_currency(),
-            apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP')))
+            apply_filters('woocommerce_' . $this->id . '_supported_currencies', array('CLP','ARS','EUR')))
         ) {
             return true;
         }
