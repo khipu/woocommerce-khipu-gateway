@@ -43,17 +43,20 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         $configuration = new Khipu\Configuration();
         $configuration->setSecret($this->secret);
         $configuration->setReceiverId($this->receiver_id);
-        $configuration->setPlatform('woocommerce-khipu', '3.4');
+        $configuration->setPlatform('woocommerce-khipu', '3.5');
 //        $configuration->setDebug(true);
 
         $client = new Khipu\ApiClient($configuration);
         $payments = new Khipu\Client\PaymentsApi($client);
 
+        foreach ($item_names as $product) {
+            $cartProductsKhipu .= "\n".$product;
+        }
 
         $options = array(
           'transaction_id' => ltrim($order->get_order_number(), '#')
         , 'custom' => serialize(array($order_id, $order->get_order_key()))
-        , 'body' => implode(', ', $item_names)
+        , 'body' => 'Productos incluidos en la compra:'.$cartProductsKhipu
         , 'return_url' => $this->get_return_url($order)
         , 'cancel_url' => $order->get_checkout_payment_url()
         , 'notify_url' => $this->notify_url
