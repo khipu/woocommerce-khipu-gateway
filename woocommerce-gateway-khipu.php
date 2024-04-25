@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu Gateway
  * Plugin URI: https://khipu.com/page/woocommerce
  * Description: Acepte pagos con transferencia procesadas por khipu
- * Version: 3.5
+ * Version: 3.6
  * Author: khipu
  * Author URI: https://khipu.com
  */
