@@ -2,9 +2,9 @@
 Contributors: khipu
 Donate link:
 Tags: payment gateway, khipu, woocommerce, chile
-Requires at least: 3.3
-Tested up to: 6.0.1
-Stable tag: 3.5
+Requires at least: 6.0
+Tested up to: 6.5.2
+Stable tag: 3.6
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,6 +31,7 @@ No hay preguntas aún.
 3. https://s3.amazonaws.com/static.khipu.com/id-cobrador.png
 
 == Changelog ==
+3.6 Compatible con PHP8
 3.5 Incluye detalle de compra en el comprobante de pago
 3.4 Habilitado para operar en Chile, Argentina y España
 3.2 Compatible con Wordpress 6.0
