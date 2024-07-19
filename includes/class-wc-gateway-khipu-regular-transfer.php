@@ -1,9 +1,7 @@
 <?php
 
-
 class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 {
-
     var $notify_url;
 
     /**
@@ -27,9 +25,9 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
         $this->description = $this->get_option('description');
         $this->receiver_id = $this->get_option('receiver_id');
         $this->secret = $this->get_option('secret');
+        $this->api_key = $this->get_option('api_key');
         $this->icon = $this->get_payment_method_icon('REGULAR_TRANSFER');
         $this->after_payment_status = $this->get_option('after_payment_status');
-
 
         add_action('woocommerce_receipt_' . $this->id, array($this, 'receipt_page'));
         add_action('woocommerce_update_options_payment_gateways_' . $this->id,
@@ -74,9 +72,8 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
     }
 
     function is_configured() {
-        return $this->secret && $this->receiver_id;
+        return $this->secret && $this->receiver_id && $this->api_key;
     }
-
 
     /**
      * Initialise Gateway Settings Form Fields
@@ -103,6 +100,13 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
                 'type' => 'text',
                 'description' => __('Ingrese su llave secreta. Se obtiene en https://khipu.com/merchant/profile ',
                     'woocommerce-gateway-khipu'),
+                'default' => '',
+                'desc_tip' => true
+            ),
+            'api_key' => array(
+                'title' => __('Api Key', 'woocommerce-gateway-khipu'),
+                'type' => 'text',
+                'description' => __('Ingrese su Api Key. Se obtiene en https://khipu.com/merchant/profile ', 'woocommerce-gateway-khipu'),
                 'default' => '',
                 'desc_tip' => true
             ),
@@ -135,7 +139,6 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
         );
     }
 
-
     /**
      * Process the payment and return the result
      */
@@ -151,11 +154,10 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
     function receipt_page($order)
     {
         $response = $this->create_payment($order);
-        if (method_exists($response, 'getTransferUrl')) {
-            wp_redirect($response->getTransferUrl());
+        if ($response && isset($response->transfer_url)) {
+            wp_redirect($response->transfer_url);
         } else {
-            echo $response;
+            echo $response ? json_encode($response) : 'Error: No se pudo crear el pago.';
         }
     }
 }
-

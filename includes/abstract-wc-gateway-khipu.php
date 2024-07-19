@@ -2,8 +2,6 @@
 
 abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 {
-
-
     function comm_error($exception = null)
     {
         if (!$exception) {
@@ -29,40 +27,39 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     function create_payment($order_id)
     {
         $order = new WC_Order($order_id);
-
         $item_names = array();
 
         if (sizeof($order->get_items()) > 0) {
             foreach ($order->get_items() as $item) {
                 if ($item['qty']) {
-                    $item_names[] = $item['name'] . ' x ' . $item['qty'];
+                    $item_names[] = $item['qty'] . ' x ' . $item['name'];
                 }
             }
         }
 
-        $configuration = new Khipu\Configuration();
-        $configuration->setSecret($this->secret);
-        $configuration->setReceiverId($this->receiver_id);
-        $configuration->setPlatform('woocommerce-khipu', '3.6');
-//        $configuration->setDebug(true);
-
-        $client = new Khipu\ApiClient($configuration);
-        $payments = new Khipu\Client\PaymentsApi($client);
-
+        $headers = [
+            'x-api-key' => $this->api_key,
+            'Content-Type' => 'application/json'
+        ];
+        $payments_url = 'https://payment-api.khipu.com/v3/payments';
+        $cartProductsKhipu = '';
         foreach ($item_names as $product) {
-            $cartProductsKhipu .= "\n".$product;
+            $cartProductsKhipu .= "\n\r" . $product;
         }
 
-        $options = array(
-          'transaction_id' => ltrim($order->get_order_number(), '#')
-        , 'custom' => serialize(array($order_id, $order->get_order_key()))
-        , 'body' => 'Productos incluidos en la compra:'.$cartProductsKhipu
-        , 'return_url' => $this->get_return_url($order)
-        , 'cancel_url' => $order->get_checkout_payment_url()
-        , 'notify_url' => $this->notify_url
-        , 'notify_api_version' => '1.3'
-        , 'payer_email' => $order->get_billing_email()
-        );
+        $data = [
+            'subject' => 'Orden ' . $order->get_order_number() . ' - ' . get_bloginfo('name'),
+            'currency' => $order->get_currency(),
+            'amount' => (float) number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', ''),
+            'transaction_id' => ltrim($order->get_order_number(), '#'),
+            'custom' => serialize([$order_id, $order->get_order_key()]),
+            'body' => 'Productos incluidos en la compra:' . $cartProductsKhipu,
+            'return_url' => $this->get_return_url($order),
+            'cancel_url' => $order->get_checkout_payment_url(),
+            'notify_url' => $this->notify_url,
+            'notify_api_version' => '3.0',
+            'payer_email' => $order->get_billing_email()
+        ];
 
         $held_duration = get_option('woocommerce_hold_stock_minutes');
 
@@ -70,38 +67,49 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             $interval = new DateInterval('PT' . $held_duration . 'M');
             $timeout = new DateTime('now');
             $timeout->add($interval);
-            $options['expires_date'] = $timeout;
+            $data['expires_date'] = $timeout->format(DateTime::ATOM);
         }
 
-        try {
-            $createPaymentResponse = $payments->paymentsPost(
-                'Orden ' . $order->get_order_number() . ' - ' . get_bloginfo('name')
-                , $order->get_currency()
-                , number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', '')
-                , $options
-            );
-        } catch (\Khipu\ApiException $e) {
-            return $this->comm_error($e->getResponseObject());
+        $response = wp_remote_post($payments_url, [
+            'headers' => $headers,
+            'body' => json_encode($data),
+            'method' => 'POST'
+        ]);
+
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            return $this->comm_error($error_message);
         }
+
+        $response_body = wp_remote_retrieve_body($response);
+        $createPaymentResponse = json_decode($response_body);
+
+        if (empty($createPaymentResponse) || isset($createPaymentResponse->error)) {
+            $error_message = json_encode($createPaymentResponse->error);
+            return "<div class='woocommerce-error'>Error ab: No se pudo crear el pago. " . $error_message . "</div>";
+        }
+
         return $createPaymentResponse;
     }
 
-
-    private function get_payment_response($notification_token)
+    private function get_payment_response($payment_id)
     {
-        $configuration = new Khipu\Configuration();
-        $configuration->setSecret($this->secret);
-        $configuration->setReceiverId($this->receiver_id);
-        $configuration->setPlatform('woocommerce-khipu', '3.1');
+        $headers = [
+            'x-api-key' => $this->api_key,
+            'Content-Type' => 'application/json'
+        ];
 
-        $client = new Khipu\ApiClient($configuration);
-        $payments = new Khipu\Client\PaymentsApi($client);
-        try {
-            $paymentsResponse = $payments->paymentsGet($notification_token);
-        } catch (\Khipu\ApiException $e) {
+        $payments_url = 'https://payment-api.khipu.com/v3/payments/' . $payment_id;
+
+        $response = wp_remote_get($payments_url, [
+            'headers' => $headers
+        ]);
+
+        if (is_wp_error($response)) {
             return null;
         }
-        return $paymentsResponse;
+
+        return json_decode(wp_remote_retrieve_body($response));
     }
 
     /**
@@ -110,34 +118,48 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     function check_ipn_response()
     {
         @ob_clean();
-        http_response_code(400);
+        http_response_code(401);
 
-        if (empty($_POST)) {
-            exit("No POST data");
-        }
-        if (empty($_POST['api_version']) || $_POST['api_version'] != '1.3') {
-            exit("Invalid API version");
-        }
-        if (empty($_POST['notification_token'])) {
-            exit("Missing notification token");
+        $raw_post = file_get_contents('php://input');
+        $signature = $_SERVER['HTTP_X_KHIPU_SIGNATURE'];
+        if (empty($_SERVER['HTTP_X_KHIPU_SIGNATURE'])) {
+            http_response_code(401);
+            exit("Missing signature");
         }
 
-        $paymentResponse = $this->get_payment_response($_POST['notification_token']);
+        $signature_parts = explode(',', $signature,2);
+        foreach ($signature_parts as $part) {
+            [$key, $value] = explode('=', $part,2);
+            if ($key === 't') {
+                $t_value = $value;
+            } elseif ($key === 's') {
+                $s_value = $value;
+            }
+        }
+        $to_hash = $t_value . '.' . $raw_post;
+        $hash_bytes = hash_hmac('sha256', $to_hash, $this->secret, true);
+        $hmac_base64 = base64_encode($hash_bytes);
+
+        if ($hmac_base64 !== $s_value) {
+            http_response_code(401);
+            exit("Invalid signature");
+        }
+
+        $paymentResponse = json_decode($raw_post);
         if (!$paymentResponse) {
-            exit("No payment response for token");
+            http_response_code(401);
+            exit("No payment response for payment ID");
         }
 
         $order = $this->get_order($paymentResponse);
         if (!$order) {
+            http_response_code(401);
             exit("No order for payment response");
         }
 
-        if ($paymentResponse->getStatus() != 'done') {
-            exit("Payment status not done");
-        }
-
-        if ($paymentResponse->getAmount() != floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', ''))) {
-            exit("Wrong amount. Expected: " . floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', '')) . ' got ' . $paymentResponse->getAmount());
+        if ($paymentResponse->amount != floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', ''))) {
+            http_response_code(401);
+            exit("Wrong amount. Expected: " . floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', '')) . ' got ' . $paymentResponse->amount);
         }
 
         if ($order) {
@@ -145,8 +167,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             if ($order->get_status() == 'completed' || $order->get_status() == 'processing') {
                 exit('Notification already processed');
             }
-            $order->add_order_note(sprintf(__('Pago verificado con código único de verificación khipu %s', 'woocommerce-gateway-khipu'), $paymentResponse->getPaymentId()));
-            $order->payment_complete($paymentResponse->getPaymentId());
+            $order->add_order_note(sprintf(__('Pago verificado con código único de verificación khipu %s', 'woocommerce-gateway-khipu'), $paymentResponse->payment_id));
+            $order->payment_complete($paymentResponse->payment_id);
             $defined_status = $this->get_option('after_payment_status');
             if ($defined_status) {
                 $order->update_status($defined_status);
@@ -158,14 +180,14 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     /**
      * get_khipu_order function.
      */
-    private function get_order(Khipu\Model\PaymentsResponse $paymentResponse)
+    private function get_order($paymentResponse)
     {
-        $custom = maybe_unserialize($paymentResponse->getCustom());
+        $custom = maybe_unserialize($paymentResponse->custom);
 
         // Backwards comp for IPN requests
         if (is_numeric($custom)) {
             $order_id = (int)$custom;
-            $order_key = $paymentResponse->getTransactionId();
+            $order_key = $paymentResponse->transaction_id;
         } elseif (is_string($custom)) {
             $order_id = (int)str_replace($this->invoice_prefix, '', $custom);
             $order_key = $custom;
@@ -209,21 +231,23 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 
         if (!$response || !$response['ts'] || (time() - (int)$response['ts']) > 30) {
             unset($response);
-            $configuration = new Khipu\Configuration();
-            $configuration->setSecret($this->secret);
-            $configuration->setReceiverId($this->receiver_id);
-            $configuration->setPlatform('woocommerce-khipu', '3.2');
+            $headers = [
+                'x-api-key' => $this->api_key,
+                'Content-Type' => 'application/json'
+            ];
 
-            $client = new Khipu\ApiClient($configuration);
-            $paymentMethodsApi = new Khipu\Client\PaymentMethodsApi($client);
+            $payments_url = 'https://payment-api.khipu.com/v3/merchants/' . $this->receiver_id . '/paymentMethods';
 
-            try {
-                $paymentsMethodsResponse = $paymentMethodsApi->merchantsIdPaymentMethodsGet($this->receiver_id);
+            $response = wp_remote_get($payments_url, [
+                'headers' => $headers
+            ]);
+
+            if (!is_wp_error($response)) {
+                $paymentsMethodsResponse = json_decode(wp_remote_retrieve_body($response));
                 $response['methods'] = $paymentsMethodsResponse;
-            } catch (\Khipu\ApiException $e) {
+                $response['ts'] = time();
+                update_option('woocommerce_gateway_khipu_payment_methods', $response);
             }
-            $response['ts'] = time();
-            update_option('woocommerce_gateway_khipu_payment_methods', $response);
         }
         return $response['methods'];
     }
@@ -234,13 +258,12 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         if (!$methods) {
             return '';
         }
-        foreach ($methods->getPaymentMethods() as $paymentMethod) {
-            if (strcmp($paymentMethod->getId(), $id) == 0) {
-                return $paymentMethod->getLogoUrl();
+        foreach ($methods->paymentMethods as $paymentMethod) {
+            if (strcmp($paymentMethod->id, $id) == 0) {
+                return $paymentMethod->logo_url;
             }
         }
     }
-
 
     function is_payment_method_available_in_khipu($id)
     {
@@ -248,8 +271,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         if (!$methods) {
             return false;
         }
-        foreach ($methods->getPaymentMethods() as $paymentMethod) {
-            if (strcmp($paymentMethod->getId(), $id) == 0) {
+        foreach ($methods->paymentMethods as $paymentMethod) {
+            if (strcmp($paymentMethod->id, $id) == 0) {
                 return true;
             }
         }
