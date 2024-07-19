@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: WooCommerce khipu Gateway
  * Plugin URI: https://khipu.com/page/woocommerce
  * Description: Acepte pagos con transferencia procesadas por khipu
- * Version: 3.6
+ * Version: 4.0
  * Author: khipu
  * Author URI: https://khipu.com
  */
@@ -40,9 +40,6 @@ function woocommerce_gateway_khipu_showMessage($message, $errormsg = false)
 
 function woocommerce_gateway_khipu_init()
 {
-
-    require __DIR__ . '/vendor/autoload.php';
-
     if (!class_exists('WC_Payment_Gateway')) {
         add_action('admin_notices', 'woocommerce_gateway_khipu_showWooCommerceNeeded');
         return;
@@ -55,8 +52,6 @@ function woocommerce_gateway_khipu_init()
         add_action('admin_notices', 'woocommerce_gateway_khipu_orderReceivedHasSpaces');
         return;
     }
-
-
 
     /**
      * Add the Gateway to WooCommerce
@@ -80,6 +75,8 @@ function woocommerce_gateway_khipu_init()
         $currencies['CLP'] = __( 'Peso Chileno', 'woocommerce' );
         $currencies['ARS'] = __( 'Peso Argentino', 'woocommerce' );
         $currencies['EUR'] = __( 'Euro', 'woocommerce' );
+        $currencies['PEN'] = __( 'Sol Peruano', 'woocommerce' );
+        $currencies['MXN'] = __( 'Peso Mexicano', 'woocommerce' );
         return $currencies;
     }
 
@@ -88,7 +85,12 @@ function woocommerce_gateway_khipu_init()
     function woocommerce_gateway_khipu_add_currencies_symbol( $currency_symbol, $currency ) {
         switch( $currency ) {
             case 'CLP': $currency_symbol = '$'; break;
+            case 'ARS': $currency_symbol = '$'; break; // Peso Argentino
+            case 'EUR': $currency_symbol = '€'; break; // Euro
+            case 'PEN': $currency_symbol = 'S/'; break; // Sol Peruano
+            case 'MXN': $currency_symbol = '$'; break; // Peso Mexicano
         }
         return $currency_symbol;
     }
 }
+
