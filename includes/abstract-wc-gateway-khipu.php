@@ -2,6 +2,9 @@
 
 abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 {
+    const PLUGIN_VERSION = '4.0.1';
+    const API_VERSION = '3.0';
+
     function comm_error($exception = null)
     {
         if (!$exception) {
@@ -39,7 +42,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 
         $headers = [
             'x-api-key' => $this->api_key,
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'khipu-api-php-client/' . self::API_VERSION . '|woocommerce-khipu/' . self::PLUGIN_VERSION
         ];
         $payments_url = 'https://payment-api.khipu.com/v3/payments';
         $cartProductsKhipu = '';
@@ -96,7 +100,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     {
         $headers = [
             'x-api-key' => $this->api_key,
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'khipu-api-php-client/' . self::API_VERSION . '|woocommerce-khipu/' . self::PLUGIN_VERSION
         ];
 
         $payments_url = 'https://payment-api.khipu.com/v3/payments/' . $payment_id;
@@ -225,7 +230,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     function get_payment_methods()
     {
         $response = get_option('woocommerce_gateway_khipu_payment_methods');
-        if (!$this->receiver_id || !$this->secret) {
+        if (!$this->receiver_id || !$this->api_key) {
             return null;
         }
 
@@ -233,6 +238,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             unset($response);
             $headers = [
                 'x-api-key' => $this->api_key,
+                'User-Agent' => 'khipu-api-php-client/' . self::API_VERSION . '|woocommerce-khipu/' . self::PLUGIN_VERSION,
                 'Content-Type' => 'application/json'
             ];
 
