@@ -10,4 +10,5 @@
 6. Ahora accede a tu cuenta de Khipu aquí, luego haz clic en “Opciones de la cuenta”, dirígete a la última sección “Para integrar Khipu a tu sitio web” y busca ahí tu Id de cobrador y la llave.
 7. Copia el Id de cobrador, vuelve a la página de administración de WooCommerce y pégalo en el campo “Id cobrador”.
 8. Repite el paso 7, pero esta vez copiando y pegando la “Llave secreta” y luego presiona “Guardar cambios”.
-9. Repetir  el proceso desde el paso 5 pero en la sección “khipu transferencia normal”.
+9. En la misma sección, crea un nuevo API KEY y repite el paso anterior, copiando y pegando en el formulario de configuración del plugin.
+10. Repetir  el proceso desde el paso 5 pero en la sección “khipu transferencia normal”.
