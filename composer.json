@@ -1,5 +1,0 @@
-{
-    "require": {
-        "khipu/khipu-api-client": "3.0.0.x-dev"
-    }
-}
