@@ -10,7 +10,7 @@
 DB_NAME="wordpress"          # nombre de la base de datos
 DB_USER="root"               # usuario de MySQL
 DB_PASS=""                   # contraseña de MySQL (vacío si no tiene)
-WP_CONFIG="/var/www/html/wordpress/wp-config.php"
+WP_CONFIG="/var/www/html/wp-config.php"
 VHOST_AVAILABLE="/etc/apache2/sites-available/wordpress.conf"
 VHOST_ENABLED="/etc/apache2/sites-enabled/wordpress.conf"
 
@@ -23,18 +23,39 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+insert_block () {
+    local URL="$1"
+
+    # 1. Eliminar bloque previo si existe
+    sed -i '/### BEGIN CUSTOM ###/,/### END CUSTOM ###/d' "$WP_CONFIG"
+
+    # 2. Insertar bloque justo ANTES de la línea que contiene “Happy publishing”
+    sed -i "/Happy publishing/i \
+### BEGIN CUSTOM ###\n\
+define('WP_HOME',    '$URL');\n\
+define('WP_SITEURL', '$URL');\n\
+define('FORCE_SSL_ADMIN', true);\n\
+if (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {\n\
+    \$_SERVER['HTTPS'] = 'on';\n\
+}\n\
+define('COOKIE_SECURE', true);\n\
+### END CUSTOM ###\n" "$WP_CONFIG"
+}
+
 if [[ "$1" == "--local" ]]; then
     echo "-> Cambiando a entorno LOCAL"
 
-    # 1. Eliminar bloques añadidos en wp-config.php
+    # 1. Eliminar bloque CUSTOM y cualquier línea que fuerce SSL
     sed -i '/### BEGIN CUSTOM ###/,/### END CUSTOM ###/d' "$WP_CONFIG"
+    sed -i "/FORCE_SSL_ADMIN/d" "$WP_CONFIG"
+    sed -i "/COOKIE_SECURE/d"   "$WP_CONFIG"
 
     # 2. Actualizar URLs en base de datos
     mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" \
-      -e "UPDATE wp_options SET option_value='http://localhost/wordpress'
+      -e "UPDATE wp_options SET option_value='http://localhost'
           WHERE option_name IN ('siteurl','home');"
 
-    # 3. Ajustar VirtualHost a localhost en ambos archivos
+    # 3. Ajustar VirtualHost a localhost
     DOMAIN="localhost"
     for FILE in "$VHOST_AVAILABLE" "$VHOST_ENABLED"; do
         sed -i "s/ServerName .*/ServerName $DOMAIN/" "$FILE"
@@ -48,32 +69,14 @@ elif [[ "$1" == "--custom" && -n "$2" ]]; then
     URL="$2"
     echo "-> Configurando WordPress para $URL"
 
-    # 1. Añadir bloque al final de wp-config.php si no existe
-    if ! grep -q "### BEGIN CUSTOM ###" "$WP_CONFIG"; then
-cat <<EOF >> "$WP_CONFIG"
-
-### BEGIN CUSTOM ###
-define('WP_HOME',    '$URL');
-define('WP_SITEURL', '$URL');
-define('FORCE_SSL_ADMIN', true);
-if (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') {
-    \$_SERVER['HTTPS']='on';
-}
-define('COOKIE_SECURE', true);
-### END CUSTOM ###
-EOF
-    else
-        # si ya existe, actualiza solo la URL
-        sed -i "s#define('WP_HOME'.*#define('WP_HOME',    '$URL');#" "$WP_CONFIG"
-        sed -i "s#define('WP_SITEURL'.*#define('WP_SITEURL', '$URL');#" "$WP_CONFIG"
-    fi
+    insert_block "$URL"
 
     # 2. Actualizar URLs en base de datos
     mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" \
       -e "UPDATE wp_options SET option_value='$URL'
           WHERE option_name IN ('siteurl','home');"
 
-    # 3. Ajustar VirtualHost para el nuevo dominio en ambos archivos
+    # 3. Ajustar VirtualHost para el nuevo dominio
     DOMAIN=$(echo "$URL" | sed 's#https\?://##')
     for FILE in "$VHOST_AVAILABLE" "$VHOST_ENABLED"; do
         sed -i "s/ServerName .*/ServerName $DOMAIN/" "$FILE"
