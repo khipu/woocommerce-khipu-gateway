@@ -2,7 +2,11 @@
 
 class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 {
-    var $notify_url;
+    public $notify_url;
+    public $receiver_id;
+    public $secret;
+    public $api_key;
+    public $after_payment_status;
 
     /**
      * Constructor for the gateway.

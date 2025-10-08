@@ -94,3 +94,13 @@ function woocommerce_gateway_khipu_init()
     }
 }
 
+add_action(
+    'woocommerce_blocks_payment_method_type_registration',
+    function ( \Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $registry ) {
+        require_once __DIR__ . '/includes/class-wc-gateway-khipu-blocks-simplified-transfer.php';
+        require_once __DIR__ . '/includes/class-wc-gateway-khipu-blocks-regular-transfer.php';
+        $registry->register( new WC_Gateway_khipu_blocks_regular_transfer() );
+        $registry->register( new WC_Gateway_khipu_blocks_simplified_transfer() );
+        
+    }
+);
