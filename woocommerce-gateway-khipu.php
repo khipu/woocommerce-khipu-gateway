@@ -5,12 +5,17 @@ if (!defined('ABSPATH')) {
 } // Exit if accessed directly
 
 /**
- * Plugin Name: WooCommerce khipu Gateway
- * Plugin URI: https://khipu.com/page/woocommerce
+ * Plugin Name: Khipu for WooCommerce
+ * Plugin URI:  https://docs.khipu.com/payment-solutions/instant-payments/khipu-ecommerce#woocommerce
  * Description: Acepte pagos con transferencia procesadas por khipu
- * Version: 4.0.2
- * Author: khipu
- * Author URI: https://khipu.com
+ * Version:     4.1.5
+ * Author:      Khipu SpA
+ * Author URI:  https://khipu.com/
+ * Text Domain: woocommerce-khipu-gateway
+ * Domain Path: /languages
+ * Requires Plugins: woocommerce
+ * License:     GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 add_action('plugins_loaded', 'woocommerce_gateway_khipu_init', 0);
@@ -35,7 +40,7 @@ function woocommerce_gateway_khipu_showMessage($message, $errormsg = false)
         echo '<div id="message" class="updated fade">';
     }
 
-    echo "<p><strong>$message</strong></p></div>";
+    printf('<div class="notice notice-error"><p><strong>%s</strong></p></div>', esc_html( $message ));
 }
 
 function woocommerce_gateway_khipu_init()
@@ -72,11 +77,11 @@ function woocommerce_gateway_khipu_init()
     add_filter('woocommerce_currencies', 'woocommerce_gateway_khipu_add_currencies' );
 
     function woocommerce_gateway_khipu_add_currencies( $currencies ) {
-        $currencies['CLP'] = __( 'Peso Chileno', 'woocommerce' );
-        $currencies['ARS'] = __( 'Peso Argentino', 'woocommerce' );
-        $currencies['EUR'] = __( 'Euro', 'woocommerce' );
-        $currencies['PEN'] = __( 'Sol Peruano', 'woocommerce' );
-        $currencies['MXN'] = __( 'Peso Mexicano', 'woocommerce' );
+        $currencies['CLP'] = __('Peso Chileno', 'woocommerce-khipu-gateway');
+        $currencies['ARS'] = __('Peso Argentino', 'woocommerce-khipu-gateway');
+        $currencies['EUR'] = __('Euro', 'woocommerce-khipu-gateway');
+        $currencies['PEN'] = __('Sol Peruano', 'woocommerce-khipu-gateway');
+        $currencies['MXN'] = __('Peso Mexicano', 'woocommerce-khipu-gateway');
         return $currencies;
     }
 
@@ -101,6 +106,6 @@ add_action(
         require_once __DIR__ . '/includes/class-wc-gateway-khipu-blocks-regular-transfer.php';
         $registry->register( new WC_Gateway_khipu_blocks_regular_transfer() );
         $registry->register( new WC_Gateway_khipu_blocks_simplified_transfer() );
-        
+
     }
 );
