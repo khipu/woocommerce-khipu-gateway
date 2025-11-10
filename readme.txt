@@ -1,10 +1,9 @@
-=== WooCommerce khipu ===
-Contributors: khipu
-Donate link:
-Tags: payment gateway, khipu, woocommerce, chile
+=== Khipu for WooCommerce ===
+Contributors: Khipu
+Tags: payment gateway, Khipu, woocommerce, chile
 Requires at least: 6.0
-Tested up to: 6.8.2
-Stable tag: 4.1
+Tested up to: 6.8
+Stable tag: 4.1.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,6 +12,9 @@ Permite el uso de khipu en WooCommerce, khipu es un medio de pago que permite pa
 == Description ==
 
 Permite el uso de khipu en WooCommerce, khipu es un medio de pago que permite pagar usando Cuentas Bancarias.
+
+**Aviso legal:** Este plugin no está afiliado ni respaldado por Automattic Inc. o por la marca WooCommerce. “WooCommerce” es una marca registrada de Automattic Inc.
+
 
 == Installation ==
 
@@ -38,6 +40,7 @@ No hay preguntas aún.
 3. https://s3.amazonaws.com/static.khipu.com/id-cobrador.png
 
 == Changelog ==
+4.1.5 Cumplimiento normas Wordpress
 4.1 Compatibilidad con Woocomerce Blocks
 4.0.2 Log de Versión
 4.0 Actualización a API 3.0 Khipu
@@ -60,6 +63,20 @@ No hay preguntas aún.
 1.0 Versión inicial
 
 
-== Upgrade notice ==
+== External services ==
 
-Versión inicial
+Este plugin se conecta al servicio externo “Khipu Payment API” para crear y consultar pagos.
+
+- ¿Qué datos se envían y cuándo?
+  - En la creación de un pago, se envían: monto, moneda, orden/ID interno, descripción y URL(s) de retorno/notificación necesarias para procesar el pago.
+  - En la consulta de un pago, se solicita el estado del pago usando el identificador de pago devuelto por la API.
+
+- ¿Por qué?
+  - Es necesario para iniciar y confirmar transacciones de pago dentro del flujo de WooCommerce.
+
+- ¿Dónde puedo revisar las políticas?
+  - Términos del servicio de Khipu: https://khipu.com
+  - Política de privacidad de Khipu: https://khipu.com
+
+ - ¿A quién contacto en caso de dudas o problemas?
+  - En caso de cualquier problema con el plugin y su configuración, puedes escribirnos a soporte@khipu.com

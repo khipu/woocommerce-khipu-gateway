@@ -1,4 +1,4 @@
-# WooCommerce khipu
+# Khipu for WooCommerce
 
 ## Instalación
 
@@ -12,3 +12,11 @@
 8. Repite el paso 7, pero esta vez copiando y pegando la “Llave secreta” y luego presiona “Guardar cambios”.
 9. En la misma sección, crea un nuevo API KEY y repite el paso anterior, copiando y pegando en el formulario de configuración del plugin.
 10. Repetir  el proceso desde el paso 5 pero en la sección “khipu transferencia normal”.
+
+## Disclaimer
+
+Este plugin no está afiliado ni respaldado por Automattic Inc. o por la marca WooCommerce. 'woocommerce-khipu-gateway' es una marca registrada de Automattic Inc.
+
+## Soporte
+
+En caso de cualquier problema con el plugin y su configuración, puedes escribirnos a soporte@khipu.com

@@ -1,5 +1,8 @@
 <?php
 
+
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+
 class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 {
     public $notify_url;
@@ -17,8 +20,8 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
         $this->id = 'khipuregulartransfer';
 
         $this->has_fields = false;
-        $this->method_title = __('khipu transferencia normal', 'woocommerce-gateway-khipu');
-        $this->method_description = sprintf(__('Khipu pago con Transferencia Manual', 'woocommerce-gateway-khipu'), admin_url('admin.php?page=wc-settings&tab=checkout&section=khipu'));
+        $this->method_title = __('khipu transferencia normal', 'woocommerce-khipu-gateway');
+        $this->method_description = sprintf(__('Khipu pago con Transferencia Manual', 'woocommerce-khipu-gateway'), admin_url('admin.php?page=wc-settings&tab=checkout&section=khipu'));
 
         $this->notify_url = add_query_arg('wc-api', 'WC_Gateway_' . $this->id, home_url('/'));
 
@@ -86,59 +89,56 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
     {
         $this->form_fields = array(
             'enabled' => array(
-                'title' => __('Enable/Disable', 'woocommerce'),
+                'title' => __('Enable/Disable', 'woocommerce-khipu-gateway'),
                 'type' => 'checkbox',
-                'label' => sprintf(__('Habilita %s', 'woocommerce-gateway-khipu'), $this->method_title),
+/* translators: string contains placeholders. */
+                'label' => sprintf(__('Habilita %s', 'woocommerce-khipu-gateway'), $this->method_title),
                 'default' => 'yes'
             ),
             'receiver_id' => array(
-                'title' => __('Id de cobrador', 'woocommerce-gateway-khipu'),
+                'title' => __('Id de cobrador', 'woocommerce-khipu-gateway'),
                 'type' => 'text',
-                'description' => __('Ingrese su Id de cobrador. Se obtiene en https://khipu.com/merchant/profile ',
-                    'woocommerce-gateway-khipu'),
+                'description' => __('Ingrese su Id de cobrador. Se obtiene en https://khipu.com/merchant/profile ', 'woocommerce-khipu-gateway'),
                 'default' => '',
                 'desc_tip' => true
             ),
             'secret' => array(
-                'title' => __('Llave', 'woocommerce-gateway-khipu'),
+                'title' => __('Llave', 'woocommerce-khipu-gateway'),
                 'type' => 'text',
-                'description' => __('Ingrese su llave secreta. Se obtiene en https://khipu.com/merchant/profile ',
-                    'woocommerce-gateway-khipu'),
+                'description' => __('Ingrese su llave secreta. Se obtiene en https://khipu.com/merchant/profile ', 'woocommerce-khipu-gateway'),
                 'default' => '',
                 'desc_tip' => true
             ),
             'api_key' => array(
-                'title' => __('Api Key', 'woocommerce-gateway-khipu'),
+                'title' => __('Api Key', 'woocommerce-khipu-gateway'),
                 'type' => 'text',
-                'description' => __('Ingrese su Api Key. Se obtiene en https://khipu.com/merchant/profile ', 'woocommerce-gateway-khipu'),
+                'description' => __('Ingrese su Api Key. Se obtiene en https://khipu.com/merchant/profile ', 'woocommerce-khipu-gateway'),
                 'default' => '',
                 'desc_tip' => true
             ),
             'after_payment_status' => array(
-                'title' => __('Estado del pedido pagado.'),
-                'description' => __('Seleccione estado con el que desea dejar sus órdenes luego de pagadas.', 'woocommerce-gateway-khipu'),
+                'title' => __('Estado del pedido pagado.', 'woocommerce-khipu-gateway'),
+                'description' => __('Seleccione estado con el que desea dejar sus órdenes luego de pagadas.', 'woocommerce-khipu-gateway'),
                 'type' => 'select',
                 'options' => array(
-                    'wc-processing' => __('Procesando', 'woocommerce-gateway-khipu'),
-                    'wc-completed' => __('Completado', 'woocommerce-gateway-khipu'),
+                    'wc-processing' => __('Procesando', 'woocommerce-khipu-gateway'),
+                    'wc-completed' => __('Completado', 'woocommerce-khipu-gateway'),
                 ),
                 'default' => 'wc-processing',
                 'desc_tip' => true
             ),
             'title' => array(
-                'title' => __('Title', 'woocommerce'),
+                'title' => __('Title', 'woocommerce-khipu-gateway'),
                 'type' => 'text',
-                'description' => __('This controls the title which the user sees during checkout.',
-                    'woocommerce'),
-                'default' => __('khipu - Transferencia normal', 'woocommerce-gateway-khipu'),
+                'description' => __('This controls the title which the user sees during checkout.', 'woocommerce-khipu-gateway'),
+                'default' => __('khipu - Transferencia normal', 'woocommerce-khipu-gateway'),
                 'desc_tip' => true
             ),
             'description' => array(
-                'title' => __('Description', 'woocommerce'),
+                'title' => __('Description', 'woocommerce-khipu-gateway'),
                 'type' => 'textarea',
-                'description' => __('Payment method description that the customer will see on your checkout.',
-                    'woocommerce'),
-                'default' => __('Paga con cualquier Banco chileno usando la página o app de tu Banco.', 'woocommerce-gateway-khipu')
+                'description' => __('Payment method description that the customer will see on your checkout.', 'woocommerce-khipu-gateway'),
+                'default' => __('Paga con cualquier Banco chileno usando la página o app de tu Banco.', 'woocommerce-khipu-gateway')
             ),
         );
     }
