@@ -3,7 +3,7 @@ Contributors: Khipu
 Tags: payment gateway, Khipu, woocommerce, chile
 Requires at least: 6.0
 Tested up to: 6.8
-Stable tag: 4.1.5
+Stable tag: 4.2.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,6 +40,7 @@ No hay preguntas aún.
 3. https://s3.amazonaws.com/static.khipu.com/id-cobrador.png
 
 == Changelog ==
+4.2.0 Devolución de dinero (reembolso total o parcial) de pedidos pagados con Khipu, desde la lista de pedidos
 4.1.5 Cumplimiento normas Wordpress
 4.1 Compatibilidad con Woocomerce Blocks
 4.0.2 Log de Versión

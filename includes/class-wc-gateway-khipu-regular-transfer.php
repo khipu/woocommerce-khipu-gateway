@@ -5,6 +5,8 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
 {
+    const ID = 'khipuregulartransfer';
+
     public $notify_url;
     public $receiver_id;
     public $secret;
@@ -17,7 +19,7 @@ class WC_Gateway_khipu_regular_transfer extends WC_Gateway_khipu_abstract
      */
     public function __construct()
     {
-        $this->id = 'khipuregulartransfer';
+        $this->id = self::ID;
 
         $this->has_fields = false;
         $this->method_title = __('khipu transferencia normal', 'woocommerce-khipu-gateway');

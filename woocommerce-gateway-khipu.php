@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * Plugin Name: Khipu for WooCommerce
  * Plugin URI:  https://docs.khipu.com/payment-solutions/instant-payments/khipu-ecommerce#woocommerce
  * Description: Acepte pagos con transferencia procesadas por khipu
- * Version:     4.1.5
+ * Version:     4.2.0
  * Author:      Khipu SpA
  * Author URI:  https://khipu.com/
  * Text Domain: woocommerce-khipu-gateway
@@ -64,6 +64,10 @@ function woocommerce_gateway_khipu_init()
     require_once dirname( __FILE__ ) . '/includes/abstract-wc-gateway-khipu.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-simplified-transfer.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-regular-transfer.php';
+    require_once dirname( __FILE__ ) . '/includes/class-wc-khipu-refund-service.php';
+    require_once dirname( __FILE__ ) . '/includes/class-wc-khipu-refund-admin.php';
+
+    WC_Khipu_Refund_Admin::init();
 
     function woocommerce_gateway_khipu_add_gateways($methods)
     {

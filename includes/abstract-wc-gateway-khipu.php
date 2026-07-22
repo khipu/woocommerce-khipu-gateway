@@ -4,8 +4,24 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 {
-    const PLUGIN_VERSION = '4.1.5';
+    const PLUGIN_VERSION = '4.2.0';
     const API_VERSION = '3.0';
+
+    /**
+     * Headers estándar para llamadas a la API de Khipu — compartido entre
+     * este archivo y WC_Khipu_Refund_Service.
+     *
+     * @param string $api_key
+     * @return array
+     */
+    public static function build_api_headers($api_key)
+    {
+        return [
+            'x-api-key'    => $api_key,
+            'Content-Type' => 'application/json',
+            'User-Agent'   => 'khipu-api-php-client/' . self::API_VERSION . '|woocommerce-khipu/' . self::PLUGIN_VERSION,
+        ];
+    }
 
     function comm_error($exception = null)
     {
@@ -42,11 +58,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             }
         }
 
-        $headers = [
-            'x-api-key'   => $this->api_key,
-            'Content-Type'=> 'application/json',
-            'User-Agent'  => 'khipu-api-php-client/' . self::API_VERSION . '|woocommerce-khipu/' . self::PLUGIN_VERSION
-        ];
+        $headers = self::build_api_headers($this->api_key);
         $payments_url = 'https://payment-api.khipu.com/v3/payments';
         $cartProductsKhipu = '';
         foreach ($item_names as $product) {
@@ -100,11 +112,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 
     private function get_payment_response($payment_id)
     {
-        $headers = [
-            'x-api-key'    => $this->api_key,
-            'Content-Type' => 'application/json',
-            'User-Agent'   => 'khipu-api-php-client/' . self::API_VERSION . '|woocommerce-khipu/' . self::PLUGIN_VERSION
-        ];
+        $headers = self::build_api_headers($this->api_key);
 
         $payments_url = 'https://payment-api.khipu.com/v3/payments/' . $payment_id;
 
@@ -229,6 +237,40 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             </div>
             <?php
         }
+
+        // Sección "Billetera de reversas" al final: saldo + estado del pedido
+        // reversado (o placeholder si aún no hay credenciales configuradas).
+        echo WC_Khipu_Refund_Admin::get_wallet_section_html(
+            $this->api_key,
+            WC_Khipu_Refund_Admin::configured_after_refund_status($this->id)
+        );
+    }
+
+    /**
+     * El campo "Estado del pedido reversado" (after_refund_status) se renderiza
+     * en la sección "Billetera de reversas" (fuera de la tabla estándar de
+     * WooCommerce, ver WC_Khipu_Refund_Admin::get_wallet_section_html()), así que
+     * WooCommerce no lo guarda solo: lo persistimos manualmente acá.
+     */
+    public function process_admin_options()
+    {
+        $saved = parent::process_admin_options();
+
+        if (isset($_POST['khipu_after_refund_status'])) {
+            $posted = wc_clean(wp_unslash($_POST['khipu_after_refund_status']));
+            if (!in_array($posted, ['', 'wc-refunded'], true)) {
+                $posted = 'wc-refunded';
+            }
+            $option_key = $this->get_option_key();
+            $settings = get_option($option_key, []);
+            if (!is_array($settings)) {
+                $settings = [];
+            }
+            $settings['after_refund_status'] = $posted;
+            update_option($option_key, $settings);
+        }
+
+        return $saved;
     }
 
     function get_payment_methods()
@@ -243,11 +285,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             $payments_url = 'https://payment-api.khipu.com/v3/merchants/' . $this->receiver_id . '/paymentMethods';
 
             // --- reemplazo de cURL por WP HTTP API ---
-            $headers = array(
-                'x-api-key'    => $this->api_key,
-                'User-Agent'   => 'khipu-api-php-client/' . self::API_VERSION . '|woocommerce-khipu/' . self::PLUGIN_VERSION,
-                'Content-Type' => 'application/json',
-            );
+            $headers = self::build_api_headers($this->api_key);
 
             $http_response = wp_remote_get( $payments_url, array(
                 'headers' => $headers,

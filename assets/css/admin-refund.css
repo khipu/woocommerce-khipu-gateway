@@ -1,0 +1,23 @@
+/* Botón de acción "Devolución Khipu" en la lista de pedidos: convertirlo en
+   botón solo-ícono (undo) — sin esto, WooCommerce muestra el texto recortado
+   en la columna angosta. */
+.wc-action-button.khipu_refund {
+    position: relative !important;
+    width: 28px !important;
+    min-width: 28px !important;
+    padding: 0 !important;
+    text-indent: -9999px !important;
+    overflow: hidden !important;
+}
+.wc-action-button.khipu_refund::after {
+    font-family: dashicons !important;
+    content: "\f171" !important; /* dashicons-undo */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    line-height: 28px;
+    text-align: center;
+    text-indent: 0;
+    font-size: 16px;
+}
