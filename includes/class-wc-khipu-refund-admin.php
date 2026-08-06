@@ -33,12 +33,37 @@ class WC_Khipu_Refund_Admin
      */
     public static function enqueue_admin_css()
     {
-        // CSS embebido (no un archivo servido por Apache: el plugin es un symlink
-        // y Apache no sirve estáticos a través de symlinks). Se adjunta a 'common'
-        // (siempre presente en wp-admin) para garantizar que se imprima. El ícono
-        // es un carácter Unicode (↺), sin depender de ninguna fuente de íconos.
-        $css = 'a.wc-action-button.khipu_refund{position:relative!important;width:28px!important;min-width:28px!important;padding:0!important;font-size:0!important;color:transparent!important;overflow:hidden!important}'
-             . 'a.wc-action-button.khipu_refund::after{content:"\21BA"!important;display:block;color:#2271b1;font-size:18px!important;line-height:26px;text-align:center;font-weight:700}';
+        // El botón solo existe en la lista de pedidos. Como el ícono va embebido
+        // (data URI, ~50KB) y no queremos inflar todas las pantallas del admin,
+        // solo inyectamos el CSS ahí. Si la pantalla es DESCONOCIDA (get_current_screen
+        // nulo), lo inyectamos igual (comportamiento seguro).
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if ($screen && !in_array($screen->id, ['woocommerce_page_wc-orders', 'edit-shop_order'], true)) {
+            return;
+        }
+
+        // Botón SIN borde ni caja (solo el ícono), chico, con el texto oculto
+        // (WooCommerce renderiza estas acciones como botones solo-ícono). CSS
+        // embebido en 'common' porque el plugin es un symlink y Apache no sirve
+        // estáticos a través de symlinks.
+        $base = 'a.wc-action-button.khipu_refund{'
+            . 'border:0!important;background-color:transparent!important;box-shadow:none!important;'
+            . 'width:32px!important;min-width:32px!important;height:32px!important;padding:0!important;'
+            . 'font-size:0!important;color:transparent!important;overflow:hidden!important}';
+
+        // Ícono: PNG del repo (assets/img/refund.png, 80x80 @2x), embebido inline
+        // como data URI (no se puede servir por URL a través del symlink). Se
+        // muestra chico (16px) — nítido por venir a doble resolución. Si el PNG no
+        // está disponible, cae al ícono Unicode ↺.
+        $png_path = dirname(dirname(__FILE__)) . '/assets/img/refund.png';
+        $png = is_readable($png_path) ? file_get_contents($png_path) : '';
+
+        if ($png) {
+            $data = 'data:image/png;base64,' . base64_encode($png);
+            $css = $base . 'a.wc-action-button.khipu_refund{background-image:url("' . $data . '")!important;background-repeat:no-repeat!important;background-position:center!important;background-size:30px 30px!important}';
+        } else {
+            $css = $base . 'a.wc-action-button.khipu_refund::after{content:"\21BA"!important;display:block;color:#4F6BEA;font-size:28px!important;line-height:32px;text-align:center;font-weight:700}';
+        }
 
         wp_add_inline_style('common', $css);
     }
@@ -289,12 +314,15 @@ class WC_Khipu_Refund_Admin
         return ('' !== $meta) ? (float) $meta : (float) $order->get_total();
     }
 
-    public static function get_wallet_balance_html($api_key)
+    /**
+     * Consulta el saldo de la billetera (objeto) o el WP_Error de Khipu, con
+     * cache de 30s por api_key (solo cachea el éxito).
+     *
+     * @param string $api_key
+     * @return object|WP_Error
+     */
+    public static function fetch_wallet_balance($api_key)
     {
-        if (!$api_key) {
-            return '';
-        }
-
         $cache_key = 'khipu_wallet_balance_' . md5($api_key);
         $balance = get_transient($cache_key);
 
@@ -306,7 +334,36 @@ class WC_Khipu_Refund_Admin
             }
         }
 
+        return $balance;
+    }
+
+    /**
+     * ¿El error de Khipu indica que la cuenta NO tiene habilitado el flag de
+     * billetera de reversas? Khipu lo devuelve como un 400 con el mensaje
+     * "La cuenta de cobro con ID … no está habilitada para hacer reversas"
+     * (verificado 2026-07-22). Es la señal limpia para gatear la UI de refund.
+     *
+     * @param object|WP_Error $balance resultado de fetch_wallet_balance()
+     * @return bool
+     */
+    public static function is_refund_wallet_disabled($balance)
+    {
+        return is_wp_error($balance)
+            && false !== stripos($balance->get_error_message(), 'no está habilitada para hacer reversas');
+    }
+
+    /**
+     * HTML del saldo a partir de un resultado ya consultado (evita re-llamar).
+     *
+     * @param object|WP_Error $balance
+     * @return string
+     */
+    public static function format_wallet_balance_html($balance)
+    {
         if (is_wp_error($balance)) {
+            if (self::is_refund_wallet_disabled($balance)) {
+                return '<p>' . esc_html__('La billetera de reversas no está habilitada en tu cuenta Khipu.', 'woocommerce-khipu-gateway') . '</p>';
+            }
             return '<p>' . esc_html__('No se pudo consultar el saldo de la billetera de reversas.', 'woocommerce-khipu-gateway') . '</p>';
         }
 
@@ -319,6 +376,14 @@ class WC_Khipu_Refund_Admin
             esc_html($balance->currency),
             esc_url($balance->add_funds_url)
         ) . '</p>';
+    }
+
+    public static function get_wallet_balance_html($api_key)
+    {
+        if (!$api_key) {
+            return '';
+        }
+        return self::format_wallet_balance_html(self::fetch_wallet_balance($api_key));
     }
 
     /**
@@ -359,7 +424,15 @@ class WC_Khipu_Refund_Admin
             return $html . '<p class="description">' . esc_html__('Complete los datos para poder visualizar la billetera.', 'woocommerce-khipu-gateway') . '</p>';
         }
 
-        $html .= self::get_wallet_balance_html($api_key);
+        $balance = self::fetch_wallet_balance($api_key);
+        $html .= self::format_wallet_balance_html($balance);
+
+        // El selector "Estado del pedido reversado" solo aplica si la billetera
+        // está habilitada (si no, no se puede reversar). Si no lo está, mostramos
+        // solo el mensaje, sin el selector.
+        if (self::is_refund_wallet_disabled($balance)) {
+            return $html;
+        }
 
         $options = [
             ''            => __('— No cambiar —', 'woocommerce-khipu-gateway'),
@@ -580,6 +653,7 @@ class WC_Khipu_Refund_Admin
     {
         $remaining = self::get_order_remaining($order);
         $currency  = $order->get_currency();
+        $balance   = self::fetch_wallet_balance(self::get_api_key_for_order($order));
 
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('Devolución Khipu', 'woocommerce-khipu-gateway') . '</h1>';
@@ -590,13 +664,23 @@ class WC_Khipu_Refund_Admin
             esc_html(self::format_money($order->get_total(), $currency))
         ) . '</p>';
 
+        // Gate: si la cuenta Khipu no tiene habilitada la billetera de reversas,
+        // no mostramos el formulario (Khipu rechazaría la reversa igual). La señal
+        // es el error específico de Khipu — ver is_refund_wallet_disabled().
+        if (self::is_refund_wallet_disabled($balance)) {
+            echo '<div class="notice notice-error inline"><p>' . esc_html__('La billetera de reversas no está habilitada en tu cuenta Khipu. No es posible hacer devoluciones hasta habilitarla.', 'woocommerce-khipu-gateway') . '</p></div>';
+            echo '<p><a href="' . esc_url(self::get_orders_list_url()) . '" class="button">' . esc_html__('Volver a Pedidos', 'woocommerce-khipu-gateway') . '</a></p>';
+            echo '</div>';
+            return;
+        }
+
         echo '<p><strong>' . sprintf(
             /* translators: %s: saldo reembolsable del pedido, formateado */
             esc_html__('Saldo reembolsable de este pedido: %s', 'woocommerce-khipu-gateway'),
             esc_html(self::format_money($remaining, $currency))
         ) . '</strong></p>';
 
-        echo self::get_wallet_balance_html(self::get_api_key_for_order($order));
+        echo self::format_wallet_balance_html($balance);
 
         // Aviso "ya tiene una devolución" SOLO si hubo una reversa EXITOSA previa
         // por el plugin. Esa señal es que `_khipu_refund_remaining` está seteada
