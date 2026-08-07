@@ -3,7 +3,7 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /**
- * UI de administración para devolver dinero de un pedido pagado con Khipu.
+ * UI de administración para reversar dinero de un pedido pagado con Khipu.
  */
 class WC_Khipu_Refund_Admin
 {
@@ -23,7 +23,7 @@ class WC_Khipu_Refund_Admin
     }
 
     /**
-     * Da un ícono (dashicon "undo") al botón de acción "Devolución Khipu" en la
+     * Da un ícono (dashicon "undo") al botón de acción "Reversa Khipu" en la
      * lista de pedidos. WooCommerce renderiza estas acciones como botones
      * solo-ícono; sin esto el botón sale vacío (el texto no cabe en la columna
      * angosta y no hay ícono). Se inyecta en todo el admin porque el selector
@@ -70,14 +70,14 @@ class WC_Khipu_Refund_Admin
 
     /**
      * Registra una página de administración oculta (sin entrada de menú) que
-     * sirve la pantalla de confirmación de devolución con el chrome estándar
+     * sirve la pantalla de confirmación de reversa con el chrome estándar
      * de wp-admin (header, menú, CSS), a diferencia de admin-post.php.
      */
     public static function register_hidden_page()
     {
         add_submenu_page(
             null, // no parent slug => hidden from any menu, but still a real registered admin page
-            __('Devolución Khipu', 'woocommerce-khipu-gateway'),
+            __('Reversa Khipu', 'woocommerce-khipu-gateway'),
             '',
             'manage_woocommerce',
             'khipu-refund',
@@ -129,7 +129,8 @@ class WC_Khipu_Refund_Admin
 
         $actions['khipu_refund'] = [
             'url'    => $url,
-            'name'   => __('Devolución Khipu', 'woocommerce-khipu-gateway'),
+            // El "name" es el tooltip (title/aria-label) del botón en la lista.
+            'name'   => __('Reversa Khipu', 'woocommerce-khipu-gateway'),
             'action' => 'khipu_refund',
         ];
 
@@ -137,7 +138,7 @@ class WC_Khipu_Refund_Admin
     }
 
     /**
-     * Intercepta el POST de confirmación de devolución en admin_init — antes de
+     * Intercepta el POST de confirmación de reversa en admin_init — antes de
      * que wp-admin emita cualquier output — para que wp_safe_redirect() en
      * redirect_with_notice() no falle por "headers already sent" (admin.php
      * siempre requiere admin-header.php antes de invocar el callback de
@@ -161,7 +162,7 @@ class WC_Khipu_Refund_Admin
 
         $order = wc_get_order($order_id);
         if (!$order || !self::is_order_eligible($order)) {
-            wp_die(__('Pedido inválido para devolución Khipu.', 'woocommerce-khipu-gateway'));
+            wp_die(__('Pedido inválido para reversa Khipu.', 'woocommerce-khipu-gateway'));
         }
 
         self::process_refund($order); // termina con redirect_with_notice() -> wp_safe_redirect() + exit
@@ -178,7 +179,7 @@ class WC_Khipu_Refund_Admin
 
         $order = wc_get_order($order_id);
         if (!$order || !self::is_order_eligible($order)) {
-            wp_die(__('Pedido inválido para devolución Khipu.', 'woocommerce-khipu-gateway'));
+            wp_die(__('Pedido inválido para reversa Khipu.', 'woocommerce-khipu-gateway'));
         }
 
         self::render_form($order);
@@ -259,7 +260,7 @@ class WC_Khipu_Refund_Admin
         if ((float) $remaining <= 0) {
             $order = wc_get_order($order->get_id()); // recargar tras wc_create_refund
             if ($order && 'refunded' !== $order->get_status()) {
-                $order->update_status('wc-refunded', __('Pago completamente reversado con Khipu (sin saldo por devolver).', 'woocommerce-khipu-gateway'));
+                $order->update_status('wc-refunded', __('Pago completamente reversado con Khipu (sin saldo por reversar).', 'woocommerce-khipu-gateway'));
             }
         }
     }
@@ -517,7 +518,7 @@ class WC_Khipu_Refund_Admin
             $error_message = $result->get_error_message();
             $order->add_order_note(sprintf(
                 /* translators: %s: mensaje de error de Khipu */
-                __('Devolución Khipu falló: %s', 'woocommerce-khipu-gateway'),
+                __('Reversa Khipu falló: %s', 'woocommerce-khipu-gateway'),
                 $error_message
             ));
 
@@ -564,7 +565,7 @@ class WC_Khipu_Refund_Admin
         if (!empty($result->message)) {
             $order->add_order_note(sprintf(
                 /* translators: 1: mensaje de Khipu, 2: monto reversado, 3: moneda, 4: saldo restante */
-                __('Devolución Khipu solicitada, queda pendiente: %1$s (reversado en esta operación: %2$s %3$s, restante por reversar: %4$s)', 'woocommerce-khipu-gateway'),
+                __('Reversa Khipu solicitada, queda pendiente: %1$s (reversado en esta operación: %2$s %3$s, restante por reversar: %4$s)', 'woocommerce-khipu-gateway'),
                 $result->message,
                 $result->refunded_amount,
                 $result->currency,
@@ -585,13 +586,13 @@ class WC_Khipu_Refund_Admin
                 self::redirect_with_notice(
                     $order->get_id(),
                     'pending',
-                    __('Devolución solicitada correctamente. La reversa quedó en proceso y se concretará en el próximo ciclo de reversas de Khipu.', 'woocommerce-khipu-gateway')
+                    __('Reversa solicitada correctamente. Quedó en proceso y se concretará en el próximo ciclo de reversas de Khipu.', 'woocommerce-khipu-gateway')
                 );
             } else {
                 self::redirect_with_notice(
                     $order->get_id(),
                     'pending',
-                    __('Devolución solicitada: la reversa quedó en proceso, pero el saldo de la billetera de reversas podría no alcanzar para concretarla. Recárgala para asegurar que se complete en el ciclo de Khipu.', 'woocommerce-khipu-gateway'),
+                    __('Reversa solicitada: quedó en proceso, pero el saldo de la billetera de reversas podría no alcanzar para concretarla. Recárgala para asegurar que se complete en el ciclo de Khipu.', 'woocommerce-khipu-gateway'),
                     self::get_recharge_url_for_order($order)
                 );
             }
@@ -600,13 +601,13 @@ class WC_Khipu_Refund_Admin
 
         $order->add_order_note(sprintf(
             /* translators: 1: monto reversado, 2: moneda, 3: total reversado acumulado, 4: saldo restante */
-            __('Devolución Khipu concretada: %1$s %2$s (total reversado del pedido: %3$s, restante por reversar: %4$s)', 'woocommerce-khipu-gateway'),
+            __('Reversa Khipu concretada: %1$s %2$s (total reversado del pedido: %3$s, restante por reversar: %4$s)', 'woocommerce-khipu-gateway'),
             $result->refunded_amount,
             $result->currency,
             $result->total_refunded,
             $result->remaining
         ));
-        self::redirect_with_notice($order->get_id(), 'success', __('Devolución realizada con éxito.', 'woocommerce-khipu-gateway'));
+        self::redirect_with_notice($order->get_id(), 'success', __('Reversa realizada con éxito.', 'woocommerce-khipu-gateway'));
     }
 
     /**
@@ -656,7 +657,7 @@ class WC_Khipu_Refund_Admin
         $balance   = self::fetch_wallet_balance(self::get_api_key_for_order($order));
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Devolución Khipu', 'woocommerce-khipu-gateway') . '</h1>';
+        echo '<h1>' . esc_html__('Reversa Khipu', 'woocommerce-khipu-gateway') . '</h1>';
         echo '<p>' . sprintf(
             /* translators: 1: número de pedido, 2: total formateado */
             esc_html__('Pedido #%1$s — Total: %2$s', 'woocommerce-khipu-gateway'),
@@ -668,7 +669,7 @@ class WC_Khipu_Refund_Admin
         // no mostramos el formulario (Khipu rechazaría la reversa igual). La señal
         // es el error específico de Khipu — ver is_refund_wallet_disabled().
         if (self::is_refund_wallet_disabled($balance)) {
-            echo '<div class="notice notice-error inline"><p>' . esc_html__('La billetera de reversas no está habilitada en tu cuenta Khipu. No es posible hacer devoluciones hasta habilitarla.', 'woocommerce-khipu-gateway') . '</p></div>';
+            echo '<div class="notice notice-error inline"><p>' . esc_html__('La billetera de reversas no está habilitada en tu cuenta Khipu. No es posible hacer reversas hasta habilitarla.', 'woocommerce-khipu-gateway') . '</p></div>';
             echo '<p><a href="' . esc_url(self::get_orders_list_url()) . '" class="button">' . esc_html__('Volver a Pedidos', 'woocommerce-khipu-gateway') . '</a></p>';
             echo '</div>';
             return;
@@ -682,14 +683,14 @@ class WC_Khipu_Refund_Admin
 
         echo self::format_wallet_balance_html($balance);
 
-        // Aviso "ya tiene una devolución" SOLO si hubo una reversa EXITOSA previa
+        // Aviso "ya tiene una reversa" SOLO si hubo una reversa EXITOSA previa
         // por el plugin. Esa señal es que `_khipu_refund_remaining` está seteada
         // (solo se escribe en la rama de éxito de process_refund). NO escaneamos
-        // notas: los intentos FALLIDOS dejan notas "Devolución Khipu falló: …" que
-        // también contienen "Devolución Khipu" y daban un falso positivo tras
+        // notas: los intentos FALLIDOS dejan notas "Reversa Khipu falló: …" que
+        // también contienen "Reversa Khipu" y daban un falso positivo tras
         // reintentar (ej. cuenta sin el flag de billetera activo).
         if ('' !== $order->get_meta('_khipu_refund_remaining')) {
-            echo '<div class="notice notice-warning inline"><p>' . esc_html__('⚠️ Este pedido ya tiene una devolución Khipu registrada anteriormente — revisa las notas del pedido antes de continuar.', 'woocommerce-khipu-gateway') . '</p></div>';
+            echo '<div class="notice notice-warning inline"><p>' . esc_html__('⚠️ Este pedido ya tiene una reversa Khipu registrada anteriormente — revisa las notas del pedido antes de continuar.', 'woocommerce-khipu-gateway') . '</p></div>';
         }
 
         echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=khipu-refund')) . '" id="khipu-refund-form">';
@@ -698,11 +699,11 @@ class WC_Khipu_Refund_Admin
         echo '<input type="hidden" name="order_id" value="' . esc_attr($order->get_id()) . '">';
 
         echo '<table class="form-table" role="presentation"><tbody>';
-        echo '<tr valign="top"><th scope="row" class="titledesc">' . esc_html__('Tipo de devolución', 'woocommerce-khipu-gateway') . '</th><td class="forminp">'
+        echo '<tr valign="top"><th scope="row" class="titledesc">' . esc_html__('Tipo de reversa', 'woocommerce-khipu-gateway') . '</th><td class="forminp">'
             . '<label><input type="radio" name="refund_type" value="full" checked> ' . esc_html__('Total', 'woocommerce-khipu-gateway') . '</label> &nbsp;&nbsp; '
             . '<label><input type="radio" name="refund_type" value="partial"> ' . esc_html__('Parcial', 'woocommerce-khipu-gateway') . '</label>'
             . '</td></tr>';
-        echo '<tr valign="top" id="khipu-amount-row"><th scope="row" class="titledesc"><label for="khipu-amount">' . esc_html__('Monto a devolver', 'woocommerce-khipu-gateway') . '</label></th><td class="forminp">'
+        echo '<tr valign="top" id="khipu-amount-row"><th scope="row" class="titledesc"><label for="khipu-amount">' . esc_html__('Monto a reversar', 'woocommerce-khipu-gateway') . '</label></th><td class="forminp">'
             . '<input type="text" inputmode="decimal" autocomplete="off" name="amount" id="khipu-amount" class="regular-text">'
             . '<p class="description">' . sprintf(
                 /* translators: %s: monto máximo reembolsable, formateado */
@@ -714,7 +715,7 @@ class WC_Khipu_Refund_Admin
         echo '</tbody></table>';
 
         echo '<p class="submit">'
-            . '<button type="submit" class="button button-primary" id="khipu-refund-submit">' . esc_html__('Confirmar devolución', 'woocommerce-khipu-gateway') . '</button> '
+            . '<button type="submit" class="button button-primary" id="khipu-refund-submit">' . esc_html__('Confirmar reversa', 'woocommerce-khipu-gateway') . '</button> '
             . '<a href="' . esc_url(self::get_orders_list_url()) . '" class="button">' . esc_html__('Cancelar', 'woocommerce-khipu-gateway') . '</a>'
             . '</p>';
         echo '</form>';
