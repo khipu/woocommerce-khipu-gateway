@@ -756,6 +756,20 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         return WC_Khipu_Methods::normalize_selection($value, $ids);
     }
 
+    /**
+     * Guarda el interruptor "Modo de pago". Si no está disponible (la cuenta no
+     * tiene transferencia simplificada) el campo sale deshabilitado y el
+     * navegador no lo envía: WooCommerce lo leería como "no" y pisaría el ajuste
+     * al guardar cualquier otro campo. En ese caso se conserva lo guardado.
+     */
+    public function validate_embedded_field($key, $value)
+    {
+        if (!$this->embedded_available()) {
+            return isset($this->settings[$key]) ? $this->settings[$key] : 'yes';
+        }
+        return is_null($value) ? 'no' : 'yes';
+    }
+
     // ------------------------------------------------------------------
     // Pago embebido (KWS) y redirección
     // ------------------------------------------------------------------
