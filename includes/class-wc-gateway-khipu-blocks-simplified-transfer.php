@@ -7,12 +7,14 @@ class WC_Gateway_khipu_blocks_simplified_transfer extends \Automattic\WooCommerc
 
     public function initialize() {
         // Se cargan los ajustes de la opción de pago clásica
-        $this->settings = get_option( 'woocommerce_khipusimplifiedtransfer_settings', [] );
+        $this->settings = get_option( WC_Gateway_khipu_abstract::SETTINGS_OPTION, [] );
     }
 
     public function is_active() {
-        // Si la opción de pago está habilitada en WooCommerce, se activa en Blocks
-        return filter_var( $this->get_setting( 'enabled', false ), FILTER_VALIDATE_BOOLEAN );
+        // Activa solo si la pasarela clásica quedó disponible (medio marcado,
+        // presente en la cuenta y moneda soportada).
+        $gateways = function_exists( 'WC' ) && WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : [];
+        return isset( $gateways[ WC_Gateway_khipu_simplified_transfer::ID ] ) && 'yes' === $gateways[ WC_Gateway_khipu_simplified_transfer::ID ]->enabled;
     }
 
     public function get_payment_method_script_handles() {
@@ -21,7 +23,7 @@ class WC_Gateway_khipu_blocks_simplified_transfer extends \Automattic\WooCommerc
             'khipu-blocks-simplified',
             plugins_url( '../assets/js/khipu-blocks-simplified.js', __FILE__ ),
             [ 'wc-blocks-registry', 'wc-settings', 'wp-element' ],
-            '1.0.0',
+            WC_Gateway_khipu_abstract::PLUGIN_VERSION,
             true
         );
         return [ 'khipu-blocks-simplified' ];
@@ -33,8 +35,9 @@ class WC_Gateway_khipu_blocks_simplified_transfer extends \Automattic\WooCommerc
 
     public function get_payment_method_data() {
         return [
-            'title'       => $this->get_setting( 'title', 'Khipu' ),
-            'description' => $this->get_setting( 'description', '' ),
+            'title'       => WC_Khipu_Methods::compose_title( $this->get_setting( 'title', 'Khipu' ), WC_Gateway_khipu_simplified_transfer::METHOD_ID ),
+            'description' => $this->get_setting( 'description', 'Paga con tu banco' ),
+            'icon'        => WC_Gateway_khipu_abstract::blocks_icon( WC_Gateway_khipu_simplified_transfer::ID ),
             'supports'    => [ 'products' ],
         ];
     }

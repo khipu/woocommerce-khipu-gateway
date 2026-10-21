@@ -10,6 +10,7 @@ class WC_Khipu_Refund_Admin
     const ELIGIBLE_GATEWAYS = [
         WC_Gateway_khipu_simplified_transfer::ID,
         WC_Gateway_khipu_regular_transfer::ID,
+        WC_Gateway_khipu_ligopay::ID,
     ];
 
     public static function init()
@@ -187,11 +188,11 @@ class WC_Khipu_Refund_Admin
 
     /**
      * @param WC_Order $order
-     * @return string api_key configurado para la pasarela de este pedido (o '' si no hay)
+     * @return string api key compartida de la tienda (una sola cuenta de cobro; el pedido no la cambia), o '' si no hay
      */
     public static function get_api_key_for_order($order)
     {
-        $settings = get_option('woocommerce_' . $order->get_payment_method() . '_settings', []);
+        $settings = get_option(WC_Gateway_khipu_abstract::SETTINGS_OPTION, []);
         return isset($settings['api_key']) ? $settings['api_key'] : '';
     }
 
@@ -394,12 +395,14 @@ class WC_Khipu_Refund_Admin
      * get_wallet_section_html() y WC_Gateway_khipu_abstract::process_admin_options()),
      * por eso se lee del option crudo y no vía $this->get_option().
      *
-     * @param string $payment_method_id id de la pasarela (= $order->get_payment_method()).
+     * @param string $payment_method_id Ya no se usa (el ajuste es compartido por las tres pasarelas); se conserva por compatibilidad.
      * @return string '' (No cambiar) | 'wc-refunded' (Reembolsado).
      */
     public static function configured_after_refund_status($payment_method_id)
     {
-        $settings = get_option('woocommerce_' . $payment_method_id . '_settings', []);
+        // Los ajustes son compartidos por las tres pasarelas; $payment_method_id se
+        // conserva en la firma por compatibilidad.
+        $settings = get_option(WC_Gateway_khipu_abstract::SETTINGS_OPTION, []);
         return (is_array($settings) && array_key_exists('after_refund_status', $settings))
             ? $settings['after_refund_status']
             : 'wc-refunded';
@@ -446,9 +449,10 @@ class WC_Khipu_Refund_Admin
         $select .= '</select>';
 
         $html .= '<table class="form-table"><tbody><tr valign="top">'
-            . '<th scope="row" class="titledesc"><label for="khipu_after_refund_status">' . esc_html__('Estado del pedido reversado', 'woocommerce-khipu-gateway') . '</label></th>'
+            . '<th scope="row" class="titledesc"><label for="khipu_after_refund_status">' . esc_html__('Estado del pedido reversado', 'woocommerce-khipu-gateway') . ' '
+            . wc_help_tip(__('Qué hacer con el pedido al reversar su pago con Khipu. "Reembolsado": registra el reembolso en WooCommerce (parcial o total) y, al agotar el saldo, marca el pedido como reembolsado (solo asiento contable, no vuelve a llamar a Khipu). "— No cambiar —": solo deja nota interna y actualiza el saldo.', 'woocommerce-khipu-gateway'))
+            . '</label></th>'
             . '<td class="forminp">' . $select
-            . '<p class="description">' . esc_html__('Qué hacer con el pedido al reversar su pago con Khipu. "Reembolsado": registra el reembolso en WooCommerce (parcial o total) y, al agotar el saldo, marca el pedido como reembolsado — solo asiento contable, no vuelve a llamar a Khipu. "— No cambiar —": solo deja nota interna y actualiza el saldo.', 'woocommerce-khipu-gateway') . '</p>'
             . '</td></tr></tbody></table>';
 
         return $html;
