@@ -95,7 +95,9 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     {
         $fields = parent::get_form_fields();
         if (isset($fields['embedded']) && !$this->embedded_available()) {
-            $fields['embedded']['default'] = 'no';
+            // El valor por defecto NO se toca: WooCommerce lo usa para armar los ajustes
+            // guardados la primera vez, y 'no' aquí dejaba el embebido apagado para siempre.
+            // Lo que se ve bloqueado lo decide get_option('embedded').
             $fields['embedded']['custom_attributes']['disabled'] = 'disabled';
         }
         return $fields;
@@ -490,6 +492,10 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             .woocommerce table.form-table input.khipu-toggle:focus { outline: 2px solid #3CB4E5; outline-offset: 2px; box-shadow: none; }
         </style>';
         parent::admin_options();
+        // Marca de que el interruptor se mostró habilitado: sin ella no se guarda (ver validate_embedded_field()).
+        if ($this->embedded_available()) {
+            echo '<input type="hidden" name="' . esc_attr($this->get_field_key('embedded') . '_present') . '" value="1" />';
+        }
         // El sol y el peso chileno no usan los mismos decimales: una tienda que
         // pasa a PEN con los decimales de CLP (0) cobraría el monto redondeado.
         if ('PEN' === get_woocommerce_currency() && 0 === absint(get_option('woocommerce_price_num_decimals', 2))) {
@@ -741,14 +747,19 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     }
 
     /**
-     * Guarda el interruptor "Modo de pago". Si no está disponible (la cuenta no
-     * tiene transferencia simplificada) el campo sale deshabilitado y el
-     * navegador no lo envía: WooCommerce lo leería como "no" y pisaría el ajuste
-     * al guardar cualquier otro campo. En ese caso se conserva lo guardado.
+     * Guarda el interruptor "Modo de pago". Si no estaba disponible al mostrar el
+     * formulario (la cuenta no tiene transferencia simplificada, o todavía no hay
+     * credenciales) el campo sale deshabilitado y el navegador no lo envía:
+     * WooCommerce lo leería como "no" y pisaría el ajuste al guardar cualquier otro
+     * campo. En ese caso se conserva lo guardado.
      */
     public function validate_embedded_field($key, $value)
     {
-        if (!$this->embedded_available()) {
+        // Solo vale lo que llegó si el formulario mostró el interruptor habilitado
+        // (admin_options() imprime la marca `_present` en ese caso). Sin la marca el
+        // campo no se podía tocar: se conserva lo guardado (o el valor por defecto).
+        $marker = $this->get_field_key($key) . '_present';
+        if (empty($_POST[$marker])) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- WooCommerce valida el nonce antes de process_admin_options().
             return isset($this->settings[$key]) ? $this->settings[$key] : 'yes';
         }
         return is_null($value) ? 'no' : 'yes';
