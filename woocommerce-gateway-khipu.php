@@ -92,7 +92,7 @@ function woocommerce_gateway_khipu_init()
      * Un solo panel de Khipu: en Ajustes → Pagos solo se lista la pasarela
      * anfitriona. WooCommerce dispara esta acción justo antes de armar el
      * listado para que las extensiones lo ajusten. Solo afecta al admin: en el
-     * checkout las tres pasarelas siguen registradas.
+     * checkout las tres pasarelas siguen registradas y con su propia imagen.
      */
     function woocommerce_gateway_khipu_hide_secondary_gateways()
     {
@@ -106,6 +106,11 @@ function woocommerce_gateway_khipu_init()
         foreach ($registry->payment_gateways as $key => $gateway) {
             if (in_array($gateway->id, $secondary, true)) {
                 unset($registry->payment_gateways[$key]);
+            } elseif (WC_Gateway_khipu_regular_transfer::ID === $gateway->id) {
+                // La fila que queda en el listado representa a todo Khipu: lleva el logo
+                // de Khipu y no la imagen de "Transferencia normal" (que sigue siendo la
+                // del checkout, porque este cambio solo vive en este request del admin).
+                $gateway->icon = plugins_url('assets/img/khipu-logo.png', WC_KHIPU_PLUGIN_FILE);
             }
         }
     }

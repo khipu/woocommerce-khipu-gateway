@@ -76,10 +76,22 @@
             .catch(function () { setLink(d.returnUrl, 'Ver mi pedido'); });
     }
 
+    // El modal de Khipu Web se monta dentro de #khipu-web-root. Si ese contenedor
+    // queda dentro del contenido del tema, la barra de navegación fija del tema
+    // (con su propio z-index) puede taparle la parte de arriba, incluido el botón de
+    // cerrar. Se saca al nivel del <body> y se le da el z-index máximo para que
+    // quede por encima de cualquier cabecera.
+    function lift() {
+        if (root.parentNode !== document.body) { document.body.appendChild(root); }
+        root.style.position = 'relative';
+        root.style.zIndex = '2147483000';
+    }
+
     function start() {
         if (started) { return; }
         started = true;
         try {
+            lift();
             var khipu = new Khipu();
             khipu.startOperation(d.paymentId, function (res) {
                 var r = res && res.result;

@@ -651,7 +651,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             return false;
         }
         foreach ($methods->paymentMethods as $paymentMethod) {
-            if (in_array($paymentMethod->id, $ids, true)) {
+            // Un elemento sin id (respuesta rara de Khipu) no debe romper el plugin.
+            if (is_object($paymentMethod) && isset($paymentMethod->id) && in_array($paymentMethod->id, $ids, true)) {
                 return true;
             }
         }
@@ -683,24 +684,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
      */
     protected function account_method_ids()
     {
-        return array_values(array_intersect(
-            WC_Khipu_Methods::account_method_ids($this->get_payment_methods()),
-            $this->known_method_ids()
-        ));
-    }
-
-    /**
-     * Medios que tienen pasarela en el plugin (solo esos tienen casilla).
-     *
-     * @return string[]
-     */
-    protected function known_method_ids()
-    {
-        return array(
-            WC_Gateway_khipu_regular_transfer::METHOD_ID,
-            WC_Gateway_khipu_simplified_transfer::METHOD_ID,
-            WC_Gateway_khipu_ligopay::METHOD_ID,
-        );
+        return WC_Khipu_Methods::account_method_ids($this->get_payment_methods());
     }
 
     /**

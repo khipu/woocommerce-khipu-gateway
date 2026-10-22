@@ -57,17 +57,32 @@ class WC_Khipu_Methods
     }
 
     /**
+     * Medios que la cuenta puede tener habilitados pero que no sirven para pagar
+     * una compra: nunca se muestran. Sumar uno acá es todo lo que hace falta.
+     */
+    private static $excluded = array('DIRECT_DEBIT');
+
+    /**
+     * Ids de los medios de la cuenta, sin repetir y en el orden que entrega Khipu,
+     * sin los excluidos. Un medio que el plugin no conoce se incluye igual (aparece
+     * en el panel); si no tiene pasarela, no genera ninguna fila.
+     *
      * @param object|null $methods respuesta de GET /merchants/{id}/paymentMethods
      * @return string[]
      */
     public static function account_method_ids($methods)
     {
         $ids = array();
-        if (is_object($methods) && !empty($methods->paymentMethods)) {
+        if (is_object($methods) && !empty($methods->paymentMethods) && is_array($methods->paymentMethods)) {
             foreach ($methods->paymentMethods as $method) {
-                if (isset($method->id)) {
-                    $ids[] = (string) $method->id;
+                if (!is_object($method) || !isset($method->id) || !is_scalar($method->id)) {
+                    continue;
                 }
+                $id = (string) $method->id;
+                if ('' === $id || in_array($id, self::$excluded, true) || in_array($id, $ids, true)) {
+                    continue;
+                }
+                $ids[] = $id;
             }
         }
         return $ids;
