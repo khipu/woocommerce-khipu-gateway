@@ -6,7 +6,10 @@
     const settings = settingsApi.getSetting( 'khipusimplifiedtransfer_data', {} );
     const el = wp.element.createElement;
 
-    const Label = () => el( 'span', null, settings.title || 'Khipu' );
+    const Label = () => el( 'span', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px' } },
+        settings.icon ? el( 'img', { src: settings.icon, alt: '', style: { height: '32px', width: 'auto' } } ) : null,
+        settings.title || 'Khipu'
+    );
     const Content = () => el( 'div', null, settings.description || '' );
 
     registry.registerPaymentMethod( {
