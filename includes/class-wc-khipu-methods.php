@@ -13,6 +13,7 @@ class WC_Khipu_Methods
         'REGULAR_TRANSFER'    => 'Transferencia normal',
         'SIMPLIFIED_TRANSFER' => 'Transferencia simplificada',
         'LIGOPAY'             => 'LigoPay',
+        'NAVE'                => 'Pago por QR',
     );
 
     /**
@@ -63,8 +64,9 @@ class WC_Khipu_Methods
     private static $excluded = array('DIRECT_DEBIT');
 
     /**
-     * Ids de los medios de la cuenta, sin repetir y en el orden que entrega Khipu,
-     * sin los excluidos. Un medio que el plugin no conoce se incluye igual (aparece
+     * Ids de los medios de la cuenta, sin repetir, sin los excluidos y en el orden de
+     * visualización (ver sort_for_display(): simplificada primero, normal al final), que
+     * es el que usan las casillas del panel y la selección guardada. Un medio que el plugin no conoce se incluye igual (aparece
      * en el panel); si no tiene pasarela, no genera ninguna fila.
      *
      * @param object|null $methods respuesta de GET /merchants/{id}/paymentMethods
@@ -85,7 +87,7 @@ class WC_Khipu_Methods
                 $ids[] = $id;
             }
         }
-        return $ids;
+        return self::sort_for_display($ids);
     }
 
     /**
@@ -108,5 +110,81 @@ class WC_Khipu_Methods
             }
         }
         return $selected;
+    }
+
+    /**
+     * Recorta un texto a un máximo de caracteres (contando multibyte) con elipsis.
+     * Khipu rechaza el detalle del cobro (`body`) de más de 5120 caracteres.
+     *
+     * @param mixed $text
+     * @param int   $max
+     * @return string
+     */
+    public static function fit_text($text, $max)
+    {
+        if (!is_string($text)) {
+            return '';
+        }
+        $max = (int) $max;
+        if ($max <= 0) {
+            return '';
+        }
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            return mb_strlen($text, 'UTF-8') <= $max ? $text : mb_substr($text, 0, $max - 1, 'UTF-8') . '…';
+        }
+        return strlen($text) <= $max ? $text : substr($text, 0, $max - 1) . '…';
+    }
+
+    /**
+     * Si una URL es de Khipu: solo https y host khipu.com o un subdominio. Las URLs de
+     * pago vienen de la API por TLS verificado, pero antes de redirigir al comprador se
+     * comprueba igual (como hace el módulo de PrestaShop).
+     *
+     * @param mixed $url
+     * @return bool
+     */
+    public static function is_khipu_url($url)
+    {
+        if (!is_string($url) || '' === $url) {
+            return false;
+        }
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return false;
+        }
+        if ('https' !== strtolower($parts['scheme'])) {
+            return false;
+        }
+        $host = strtolower($parts['host']);
+        return 'khipu.com' === $host || '.khipu.com' === substr($host, -10);
+    }
+
+    /**
+     * Orden en que se muestran los medios de Khipu: la transferencia simplificada
+     * siempre primero y la transferencia normal siempre al final; el resto (LigoPay,
+     * QR, uno nuevo) conserva el orden recibido. Sin duplicados.
+     *
+     * Va acá (sin WordPress) para poder probarlo solo; quien lo aplica al registro de
+     * pasarelas es woocommerce_gateway_khipu_sort_rows().
+     *
+     * @param string[] $method_ids
+     * @return string[]
+     */
+    public static function sort_for_display(array $method_ids)
+    {
+        $ids = array_values(array_unique(array_map('strval', $method_ids)));
+        $first = array();
+        $middle = array();
+        $last = array();
+        foreach ($ids as $id) {
+            if ('SIMPLIFIED_TRANSFER' === $id) {
+                $first[] = $id;
+            } elseif ('REGULAR_TRANSFER' === $id) {
+                $last[] = $id;
+            } else {
+                $middle[] = $id;
+            }
+        }
+        return array_merge($first, $middle, $last);
     }
 }

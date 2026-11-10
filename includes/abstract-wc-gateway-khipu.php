@@ -4,11 +4,29 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
 {
-    const PLUGIN_VERSION = '4.3.0';
+    const PLUGIN_VERSION = '4.3.1';
     const API_VERSION = '3.0';
 
-    /** Opción de WordPress compartida por las tres pasarelas (un solo panel). */
+    /** Opción de WordPress compartida por todas las pasarelas Khipu (un solo panel). */
     const SETTINGS_OPTION = 'woocommerce_khipu_settings';
+
+    /** Tope del cuerpo de una notificación: las de Khipu pesan menos de 2 KB. */
+    const NOTIFICATION_MAX_BYTES = 65536;
+
+    /** Máximo que acepta Khipu en el detalle del cobro (`body`). */
+    const PAYMENT_BODY_MAX_CHARS = 5120;
+
+    /**
+     * La única lista de pasarelas Khipu, en orden de registro. La usan el webhook
+     * (un pedido de otra pasarela no se concilia) y el orden de las filas. Un medio
+     * nuevo se suma acá y en la reversa (WC_Khipu_Refund_Admin::ELIGIBLE_GATEWAYS).
+     */
+    const GATEWAY_IDS = array(
+        WC_Gateway_khipu_simplified_transfer::ID,
+        WC_Gateway_khipu_regular_transfer::ID,
+        WC_Gateway_khipu_ligopay::ID,
+        WC_Gateway_khipu_nave::ID,
+    );
 
     public $notify_url;
     public $receiver_id;
@@ -49,9 +67,28 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         // Payment listener/API hook
         add_action('woocommerce_api_wc_gateway_' . $this->id, array($this, 'check_ipn_response'));
 
-        if (!$this->is_valid_for_use()) {
-            $this->enabled = false;
-        }
+    }
+
+    /**
+     * «Habilitado» (la opción compartida, lo que el comercio enciende y apaga en Ajustes →
+     * Pagos) es una cosa; «disponible en el checkout» es otra: además hace falta que la
+     * cuenta tenga este medio y que esté marcado en el panel. Antes el constructor
+     * apagaba la pasarela cuando su medio faltaba, y como la anfitriona (transferencia
+     * normal) es la única fila que ve el admin, con una cuenta sin ese medio la fila salía
+     * «inactiva» y el botón de encender apagaba Khipu entero.
+     */
+    public function is_available()
+    {
+        return parent::is_available() && $this->is_valid_for_use();
+    }
+
+    /**
+     * Sin credenciales, WooCommerce muestra «Finalizar configuración» en vez de un
+     * interruptor y lleva al panel al intentar activar la pasarela desde el listado.
+     */
+    public function needs_setup()
+    {
+        return !$this->is_configured();
     }
 
     /**
@@ -126,14 +163,16 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             ),
             'secret' => array(
                 'title' => __('Llave', 'woocommerce-khipu-gateway'),
-                'type' => 'text',
+                'type' => 'password',
+                'custom_attributes' => array('autocomplete' => 'new-password'),
                 'description' => __('Ingrese su llave secreta. Se obtiene en https://khipu.com/merchant/profile ', 'woocommerce-khipu-gateway'),
                 'default' => '',
                 'desc_tip' => true
             ),
             'api_key' => array(
                 'title' => __('Api Key', 'woocommerce-khipu-gateway'),
-                'type' => 'text',
+                'type' => 'password',
+                'custom_attributes' => array('autocomplete' => 'new-password'),
                 'description' => __('Ingrese su Api Key. Se obtiene en https://khipu.com/merchant/profile ', 'woocommerce-khipu-gateway'),
                 'default' => '',
                 'desc_tip' => true
@@ -298,7 +337,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             'amount'            => (float) number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', ''),
             'transaction_id'    => ltrim($order->get_order_number(), '#'),
             'custom'            => serialize([$order_id, $order->get_order_key()]),
-            'body'              => 'Productos incluidos en la compra:' . $cartProductsKhipu,
+            'body'              => WC_Khipu_Methods::fit_text('Productos incluidos en la compra:' . $cartProductsKhipu, self::PAYMENT_BODY_MAX_CHARS),
             'return_url'        => $this->get_return_url($order),
             'cancel_url'        => $order->get_checkout_payment_url(),
             'notify_url'        => $this->notify_url,
@@ -332,8 +371,13 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         $response_body = wp_remote_retrieve_body($response);
         $createPaymentResponse = json_decode($response_body);
 
-        if (empty($createPaymentResponse) || isset($createPaymentResponse->error)) {
-            $error_message = json_encode(isset($createPaymentResponse->error) ? $createPaymentResponse->error : $response_body);
+        $http_code = (int) wp_remote_retrieve_response_code($response);
+        if (empty($createPaymentResponse) || $http_code >= 400 || isset($createPaymentResponse->error) || isset($createPaymentResponse->errors) || empty($createPaymentResponse->payment_id)) {
+            // Khipu responde 4xx con {status, message, errors:[{field, message}]}: se registra para el comercio.
+            if (function_exists('wc_get_logger')) {
+                wc_get_logger()->error(sprintf('Khipu create payment: HTTP %d %s', $http_code, is_string($response_body) ? substr($response_body, 0, 1000) : ''), array('source' => 'khipu'));
+            }
+            $error_message = json_encode(isset($createPaymentResponse->errors) ? $createPaymentResponse->errors : (isset($createPaymentResponse->error) ? $createPaymentResponse->error : $response_body));
             return "<div class='woocommerce-error'>Error ab: No se pudo crear el pago. " . esc_html($error_message) . "</div>";
         }
 
@@ -371,27 +415,40 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             exit('Not configured');
         }
 
-        $raw_post = file_get_contents('php://input');
-        $signature = $_SERVER['HTTP_X_KHIPU_SIGNATURE'];
-        if (empty($_SERVER['HTTP_X_KHIPU_SIGNATURE'])) {
+        // La cabecera se comprueba antes de leer el cuerpo: sin ella no hay nada que firmar.
+        $signature = isset($_SERVER['HTTP_X_KHIPU_SIGNATURE']) ? (string) $_SERVER['HTTP_X_KHIPU_SIGNATURE'] : '';
+        if ('' === $signature) {
             http_response_code(401);
             exit("Missing signature");
         }
+        // Un cuerpo grande no es de Khipu: no se lee entero ni se firma.
+        $content_length = isset($_SERVER['CONTENT_LENGTH']) ? (int) $_SERVER['CONTENT_LENGTH'] : 0;
+        if ($content_length > self::NOTIFICATION_MAX_BYTES) {
+            http_response_code(413);
+            exit('Payload too large');
+        }
+        $raw_post = (string) file_get_contents('php://input', false, null, 0, self::NOTIFICATION_MAX_BYTES + 1);
+        if (strlen($raw_post) > self::NOTIFICATION_MAX_BYTES) {
+            http_response_code(413);
+            exit('Payload too large');
+        }
 
-        $signature_parts = explode(',', $signature,2);
-        foreach ($signature_parts as $part) {
-            [$key, $value] = explode('=', $part,2);
-            if ($key === 't') {
+        $t_value = '';
+        $s_value = '';
+        foreach (explode(',', $signature, 2) as $part) {
+            if (false === strpos($part, '=')) {
+                continue;
+            }
+            list($key, $value) = explode('=', $part, 2);
+            if ('t' === $key) {
                 $t_value = $value;
-            } elseif ($key === 's') {
+            } elseif ('s' === $key) {
                 $s_value = $value;
             }
         }
-        $to_hash = $t_value . '.' . $raw_post;
-        $hash_bytes = hash_hmac('sha256', $to_hash, $this->secret, true);
-        $hmac_base64 = base64_encode($hash_bytes);
+        $hmac_base64 = base64_encode(hash_hmac('sha256', $t_value . '.' . $raw_post, $this->secret, true));
 
-        if ($hmac_base64 !== $s_value) {
+        if ('' === $s_value || !hash_equals($hmac_base64, $s_value)) {
             http_response_code(401);
             exit("Invalid signature");
         }
@@ -403,44 +460,135 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         }
 
         $order = $this->get_order($paymentResponse);
-        if (!$order) {
+        if (false === $order) {
             http_response_code(401);
             exit("No order for payment response");
         }
+        if (!$order) {
+            // Un pedido que no existe (borrado, o aviso de otra tienda) tampoco existirá en
+            // el reintento: se responde 200 para que Khipu no insista, y queda en el log.
+            if (function_exists('wc_get_logger')) {
+                wc_get_logger()->warning(sprintf('Khipu webhook: no order for notification (payment_id %s)', isset($paymentResponse->payment_id) && is_scalar($paymentResponse->payment_id) ? sanitize_text_field((string) $paymentResponse->payment_id) : '?'), array('source' => 'khipu'));
+            }
+            http_response_code(200);
+            exit("No order for payment response");
+        }
 
-        if (!in_array($order->get_payment_method(), array(
-            WC_Gateway_khipu_regular_transfer::ID,
-            WC_Gateway_khipu_simplified_transfer::ID,
-            WC_Gateway_khipu_ligopay::ID,
-        ), true)) {
+        if (!in_array($order->get_payment_method(), self::GATEWAY_IDS, true)) {
             http_response_code(401);
             exit('Order is not a Khipu order');
         }
 
-        if ($paymentResponse->amount != floatval(number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', ''))) {
+        $expected = (float) number_format($order->get_total(), absint(get_option('woocommerce_price_num_decimals', 2)), '.', '');
+        $posted_amount = isset($paymentResponse->amount) ? $paymentResponse->amount : null;
+        if (!is_numeric($posted_amount) || abs((float) $posted_amount - $expected) > 0.00001) {
             http_response_code(401);
-            $expected = floatval( number_format( $order->get_total(), absint( get_option( 'woocommerce_price_num_decimals', 2 ) ), '.', '' ) );
-            exit( 'Wrong amount. Expected: ' . esc_html( (string) $expected ) . ' got ' . esc_html( (string) $paymentResponse->amount ) );
+            exit('Wrong amount. Expected: ' . esc_html((string) $expected) . ' got ' . esc_html(is_scalar($posted_amount) ? (string) $posted_amount : gettype($posted_amount)));
         }
 
-        if ($order) {
-            http_response_code(200);
-            if ($order->get_status() == 'completed' || $order->get_status() == 'processing') {
-                exit('Notification already processed');
-            }
-            /* translators: string contains placeholders. */
-            $order->add_order_note(sprintf(__('Pago verificado con código único de verificación khipu %s', 'woocommerce-khipu-gateway'), $paymentResponse->payment_id));
-            $order->payment_complete($paymentResponse->payment_id);
-            $defined_status = $this->get_option('after_payment_status');
-            if ($defined_status) {
-                $order->update_status($defined_status);
-            }
-            exit('Notification processed');
+        // Un pedido a la vez: dos avisos simultáneos (Khipu reintenta) no deben completar el
+        // pago dos veces. El candado vive en MySQL y se suelta al terminar la petición.
+        global $wpdb;
+        $lock_name = 'khipu_order_' . $order->get_id();
+        $locked = '1' === (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 5)', $lock_name));
+        if (!$locked) {
+            http_response_code(503);
+            exit('Order busy, retry later');
         }
+        $payment_id = isset($paymentResponse->payment_id) && is_scalar($paymentResponse->payment_id) ? (string) $paymentResponse->payment_id : '';
+        $order = $this->reload_order($order->get_id());
+        http_response_code(200);
+        if (!$order) {
+            $this->release_order_lock($lock_name);
+            exit("No order for payment response");
+        }
+        // Idempotencia por código de pago: un aviso ya aplicado (aunque el comercio haya
+        // cancelado o reembolsado el pedido después) no se vuelve a aplicar.
+        if ('' !== $payment_id && (string) $order->get_transaction_id() === $payment_id) {
+            $this->release_order_lock($lock_name);
+            exit('Notification already processed');
+        }
+        if ($order->has_status(array('completed', 'processing'))) {
+            $this->release_order_lock($lock_name);
+            exit('Notification already processed');
+        }
+        // Un pedido cancelado sin pagar (p. ej. por vencimiento de la retención de stock)
+        // cuyo pago llega tarde sí se completa, como permite WooCommerce: el dinero llegó.
+        if (!$order->has_status(array('pending', 'on-hold', 'failed', 'cancelled'))) {
+            // Reembolsado, borrador, etc.: un aviso tardío o repetido no revive el pedido.
+            $order->add_order_note(sprintf(
+                /* translators: 1: código de pago de Khipu, 2: estado del pedido */
+                __('Khipu: se recibió un aviso de pago (código %1$s) pero el pedido está en «%2$s»; no se modificó.', 'woocommerce-khipu-gateway'),
+                $payment_id,
+                wc_get_order_status_name($order->get_status())
+            ));
+            if (function_exists('wc_get_logger')) {
+                wc_get_logger()->warning(sprintf('Khipu webhook: order %d is %s, notification ignored (payment_id %s)', $order->get_id(), $order->get_status(), $payment_id), array('source' => 'khipu'));
+            }
+            $this->release_order_lock($lock_name);
+            exit('Notification ignored: order is ' . esc_html($order->get_status()));
+        }
+        /* translators: string contains placeholders. */
+        $order->add_order_note(sprintf(__('Pago verificado con código único de verificación khipu %s', 'woocommerce-khipu-gateway'), $payment_id));
+        $order->payment_complete($payment_id);
+        $defined_status = $this->get_option('after_payment_status');
+        if ($defined_status) {
+            $order->update_status($defined_status);
+        }
+        $this->release_order_lock($lock_name);
+        exit('Notification processed');
     }
 
     /**
-     * get_khipu_order function.
+     * Relee el pedido desde la base, saltando la caché de objetos de esta petición, para
+     * decidir con el estado real (otro proceso puede haberlo pagado o cancelado).
+     *
+     * @param int $order_id
+     * @return WC_Order|null
+     */
+    private function reload_order($order_id)
+    {
+        $order_id = (int) $order_id;
+        if (class_exists('\\Automattic\\WooCommerce\\Caches\\OrderCache') && function_exists('wc_get_container')) {
+            try {
+                wc_get_container()->get(\Automattic\WooCommerce\Caches\OrderCache::class)->remove($order_id);
+            } catch (\Exception $e) {
+                // Sin caché de pedidos que limpiar.
+            }
+        }
+        // Con «HPOS Data Caching» (función experimental) el datastore sirve la fila desde su
+        // propia caché: también se limpia, o la relectura devolvería el estado viejo.
+        if (class_exists('\\Automattic\\WooCommerce\\Internal\\DataStores\\Orders\\OrdersTableDataStore') && function_exists('wc_get_container')) {
+            try {
+                $store = wc_get_container()->get(\Automattic\WooCommerce\Internal\DataStores\Orders\OrdersTableDataStore::class);
+                if (method_exists($store, 'clear_cached_data')) {
+                    $store->clear_cached_data(array($order_id));
+                }
+            } catch (\Exception $e) {
+                // Sin datastore de HPOS que limpiar.
+            }
+        }
+        clean_post_cache($order_id);
+        $order = wc_get_order($order_id);
+        return $order instanceof WC_Order ? $order : null;
+    }
+
+    /**
+     * @param string $lock_name
+     */
+    private function release_order_lock($lock_name)
+    {
+        global $wpdb;
+        $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+    }
+
+    /**
+     * Pedido al que se refiere una notificación: `custom` trae [id, llave] serializados
+     * (o, en avisos antiguos, solo el id o la llave). Nunca lanza: `wc_get_order()` no
+     * instancia objetos ni falla con un id inexistente.
+     *
+     * @param object $paymentResponse
+     * @return WC_Order|null|false null si el pedido no existe; false si `custom` está malformado
      */
     private function get_order($paymentResponse)
     {
@@ -449,31 +597,37 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         if (is_string($custom) && is_serialized($custom)) {
             $custom = unserialize($custom, array('allowed_classes' => false));
             if (!is_array($custom) || 2 !== count($custom)) {
-                return null;
+                return false;
             }
         }
 
-        // Backwards comp for IPN requests
+        $order_id = 0;
+        $order_key = '';
         if (is_numeric($custom)) {
-            $order_id = (int)$custom;
-            $order_key = $paymentResponse->transaction_id;
+            // Backwards comp for IPN requests
+            $order_id = (int) $custom;
+            $order_key = isset($paymentResponse->transaction_id) && is_scalar($paymentResponse->transaction_id) ? (string) $paymentResponse->transaction_id : '';
         } elseif (is_string($custom)) {
-            $order_id = (int)str_replace($this->invoice_prefix, '', $custom);
+            $order_id = (int) $custom;
             $order_key = $custom;
         } elseif (is_array($custom) && 2 === count($custom)) {
-            list($order_id, $order_key) = array_values($custom);
+            list($id, $key) = array_values($custom);
+            if (!is_scalar($id) || !is_scalar($key)) {
+                return false;
+            }
+            $order_id = (int) $id;
+            $order_key = (string) $key;
         } else {
-            return null;
+            return false;
         }
 
-        $order = new WC_Order($order_id);
-
-        if (!isset($order->id)) {
-            $order_id = woocommerce_get_order_id_by_order_key($order_key);
-            $order = new WC_Order($order_id);
+        $order = $order_id > 0 ? wc_get_order($order_id) : false;
+        if (!($order instanceof WC_Order) && '' !== $order_key) {
+            $by_key = (int) wc_get_order_id_by_order_key($order_key);
+            $order = $by_key > 0 ? wc_get_order($by_key) : false;
         }
 
-        return $order;
+        return $order instanceof WC_Order ? $order : null;
     }
 
     /**
@@ -496,14 +650,23 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
         if ($this->embedded_available()) {
             echo '<input type="hidden" name="' . esc_attr($this->get_field_key('embedded') . '_present') . '" value="1" />';
         }
-        // El sol y el peso chileno no usan los mismos decimales: una tienda que
-        // pasa a PEN con los decimales de CLP (0) cobraría el monto redondeado.
-        if ('PEN' === get_woocommerce_currency() && 0 === absint(get_option('woocommerce_price_num_decimals', 2))) {
+        // El sol y el peso argentino usan 2 decimales y el peso chileno 0: una tienda
+        // que pasa a PEN o ARS con los decimales de CLP cobraría el monto redondeado.
+        $decimal_currencies = array(
+            'PEN' => __('soles (PEN)', 'woocommerce-khipu-gateway'),
+            'ARS' => __('pesos argentinos (ARS)', 'woocommerce-khipu-gateway'),
+        );
+        $currency = get_woocommerce_currency();
+        if (isset($decimal_currencies[$currency]) && 0 === absint(get_option('woocommerce_price_num_decimals', 2))) {
             ?>
             <div class="inline notice notice-warning">
                 <p>
                     <strong><?php esc_html_e('Revisa los decimales de precio', 'woocommerce-khipu-gateway'); ?></strong>:
-                    <?php esc_html_e('La tienda está en soles (PEN) con 0 decimales. Khipu cobraría el monto redondeado al entero. Configura 2 decimales en WooCommerce → Ajustes → General → Opciones de moneda.', 'woocommerce-khipu-gateway'); ?>
+                    <?php echo esc_html(sprintf(
+                        /* translators: %s: nombre de la moneda, p. ej. "soles (PEN)" */
+                        __('La tienda está en %s con 0 decimales. Khipu cobraría el monto redondeado al entero. Configura 2 decimales en WooCommerce → Ajustes → General → Opciones de moneda.', 'woocommerce-khipu-gateway'),
+                        $decimal_currencies[$currency]
+                    )); ?>
                 </p>
             </div>
             <?php
@@ -678,7 +841,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
     public static function select_redirect_url($response, $currency, $own_key)
     {
         if (is_object($response) && !empty($response->$own_key)) {
-            return (string) $response->$own_key;
+            $url = (string) $response->$own_key;
+            return WC_Khipu_Methods::is_khipu_url($url) ? $url : null;
         }
         return null;
     }
@@ -944,6 +1108,8 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             return;
         }
 
+        // La URL de respaldo también viene de Khipu: solo se usa si es de Khipu (https).
+        $fallback_url = WC_Khipu_Methods::is_khipu_url($payment['url']) ? $payment['url'] : '';
         $file = dirname(WC_KHIPU_PLUGIN_FILE) . '/assets/js/khipu-embedded.js';
         wp_enqueue_script(
             'khipu-embedded',
@@ -957,7 +1123,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             '<div id="khipu-web-root" data-payment-id="%s" data-return-url="%s" data-fallback-url="%s" data-cart-url="%s" data-ajax-url="%s" data-cancel-action="%s" data-order-id="%d" data-order-key="%s" data-nonce="%s" data-kws-url="%s"></div>',
             esc_attr($payment['payment_id']),
             esc_url($this->get_return_url($order)),
-            esc_url($payment['url']),
+            esc_url($fallback_url),
             esc_url(wc_get_cart_url()),
             esc_url(admin_url('admin-ajax.php')),
             esc_attr(self::AJAX_CANCEL_ACTION),
@@ -967,7 +1133,7 @@ abstract class WC_Gateway_khipu_abstract extends WC_Payment_Gateway
             esc_url(self::KWS_SCRIPT_URL)
         );
         echo '<p class="khipu-embedded-msg">' . esc_html__('Abriendo Khipu para completar tu pago...', 'woocommerce-khipu-gateway')
-            . ' <a href="' . esc_url($payment['url']) . '">' . esc_html__('Si no se abre, haz clic aquí.', 'woocommerce-khipu-gateway') . '</a></p>';
+            . ' <a href="' . esc_url($fallback_url) . '">' . esc_html__('Si no se abre, haz clic aquí.', 'woocommerce-khipu-gateway') . '</a></p>';
     }
 
     /**

@@ -10,7 +10,10 @@ define('WC_KHIPU_PLUGIN_FILE', __FILE__);
  * Plugin Name: Khipu for WooCommerce
  * Plugin URI:  https://docs.khipu.com/payment-solutions/instant-payments/khipu-ecommerce#woocommerce
  * Description: Acepte pagos con transferencia procesadas por khipu
- * Version:     4.3.0
+ * Version:     4.3.1
+ * Requires PHP: 7.4
+ * WC requires at least: 8.5
+ * WC tested up to: 10.2
  * Author:      Khipu SpA
  * Author URI:  https://khipu.com/
  * Text Domain: woocommerce-khipu-gateway
@@ -19,6 +22,70 @@ define('WC_KHIPU_PLUGIN_FILE', __FILE__);
  * License:     GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
+
+/**
+ * Compatibilidad declarada con el almacenamiento de pedidos en tablas propias (HPOS)
+ * y con el checkout de bloques. Todo el acceso a pedidos es por el CRUD de WooCommerce.
+ */
+add_action('before_woocommerce_init', function () {
+    if (class_exists('\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil')) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+    }
+});
+
+/**
+ * La REST de pasarelas (GET /wc/v3/payment_gateways/{id}) devuelve los ajustes con sus
+ * valores a cualquier usuario con manage_woocommerce. La llave secreta firma el webhook y
+ * la API key opera la cuenta: no viajan por ahí. (Quien necesite leerlas, las ve en el panel.)
+ */
+add_filter('woocommerce_rest_prepare_payment_gateway', function ($response, $gateway) {
+    if (!($gateway instanceof WC_Gateway_khipu_abstract) || !is_object($response) || !method_exists($response, 'get_data')) {
+        return $response;
+    }
+    $data = $response->get_data();
+    foreach (array('secret', 'api_key') as $field) {
+        if (isset($data['settings'][$field]['value'])) {
+            $data['settings'][$field]['value'] = '';
+        }
+    }
+    $response->set_data($data);
+    return $response;
+}, 10, 2);
+
+/**
+ * La REST de opciones de wc-admin (GET /wc-admin/options) entrega opciones enteras a los
+ * administradores: la de Khipu, con la llave y la API key, queda fuera.
+ */
+/**
+ * Como la REST de pasarelas devuelve la llave y la API key vacías, un cliente que lea los
+ * ajustes y los reenvíe (PUT) mandaría esos campos vacíos: se conservan los guardados.
+ * Este filtro solo lo aplica el guardado por REST; el panel de Khipu sigue pudiendo
+ * cambiarlos o vaciarlos.
+ */
+foreach (array('khipusimplifiedtransfer', 'khipuregulartransfer', 'khipuligopay', 'khipunave') as $woocommerce_gateway_khipu_rest_id) {
+    add_filter('woocommerce_gateway_' . $woocommerce_gateway_khipu_rest_id . '_settings_values', function ($settings) {
+        if (!is_array($settings)) {
+            return $settings;
+        }
+        $stored = get_option('woocommerce_khipu_settings', array());
+        foreach (array('secret', 'api_key') as $field) {
+            if ((!isset($settings[$field]) || '' === (string) $settings[$field]) && is_array($stored) && !empty($stored[$field])) {
+                $settings[$field] = $stored[$field];
+            }
+        }
+        return $settings;
+    });
+}
+unset($woocommerce_gateway_khipu_rest_id);
+
+add_filter('woocommerce_rest_api_option_permissions', function ($permissions) {
+    if (!is_array($permissions)) {
+        $permissions = array();
+    }
+    $permissions['woocommerce_khipu_settings'] = false;
+    return $permissions;
+});
 
 add_action('plugins_loaded', 'woocommerce_gateway_khipu_init', 0);
 
@@ -68,6 +135,7 @@ function woocommerce_gateway_khipu_init()
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-simplified-transfer.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-regular-transfer.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-ligopay.php';
+    require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-khipu-nave.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-khipu-refund-service.php';
     require_once dirname( __FILE__ ) . '/includes/class-wc-khipu-refund-admin.php';
 
@@ -83,6 +151,7 @@ function woocommerce_gateway_khipu_init()
         $methods[] = 'WC_Gateway_khipu_simplified_transfer';
         $methods[] = 'WC_Gateway_khipu_regular_transfer';
         $methods[] = 'WC_Gateway_khipu_ligopay';
+        $methods[] = 'WC_Gateway_khipu_nave';
         return $methods;
     }
 
@@ -102,7 +171,7 @@ function woocommerce_gateway_khipu_init()
         // El arreglo `payment_gateways` está indexado por orden de la pasarela, no por id:
         // se recorre y se busca por ->id.
         $registry = WC()->payment_gateways();
-        $secondary = array(WC_Gateway_khipu_simplified_transfer::ID, WC_Gateway_khipu_ligopay::ID);
+        $secondary = array(WC_Gateway_khipu_simplified_transfer::ID, WC_Gateway_khipu_ligopay::ID, WC_Gateway_khipu_nave::ID);
         foreach ($registry->payment_gateways as $key => $gateway) {
             if (in_array($gateway->id, $secondary, true)) {
                 unset($registry->payment_gateways[$key]);
@@ -116,6 +185,97 @@ function woocommerce_gateway_khipu_init()
     }
 
     add_action('woocommerce_admin_field_payment_gateways', 'woocommerce_gateway_khipu_hide_secondary_gateways');
+
+    /**
+     * Orden de las filas de Khipu: transferencia simplificada primero, transferencia
+     * normal al final, el resto (QR, LigoPay) en medio, y las cuatro contiguas en la
+     * posición de la pasarela anfitriona (transferencia normal), que es la única fila
+     * que el comercio ve y puede arrastrar en Ajustes → Pagos.
+     *
+     * No basta con el orden de registro: WooCommerce ordena por la opción
+     * `woocommerce_gateway_order` cuando el comercio alguna vez arrastró sus pasarelas, y
+     * como las secundarias de Khipu están ocultas del listado del admin, no entran en esa
+     * opción y caen al final (índice 999+), o conservan una posición vieja por encima de
+     * la anfitriona. Se ordena sobre el registro porque de ahí leen el checkout clásico,
+     * Blocks y el listado del admin.
+     *
+     * Cuidados: WooCommerce vuelve a llamar init() al guardar un panel SIN vaciar el
+     * registro, así que se deduplica por id y se conservan las claves originales (si se
+     * reindexara, el segundo init() dejaría pasarelas ajenas repetidas). Requiere la
+     * acción `wc_payment_gateways_initialized` (WooCommerce 8.5+).
+     *
+     * @param WC_Payment_Gateways $registry
+     */
+    function woocommerce_gateway_khipu_sort_rows($registry)
+    {
+        if (!($registry instanceof WC_Payment_Gateways) || empty($registry->payment_gateways)) {
+            return;
+        }
+        // Una pasarela por id, conservando la primera aparición y su clave.
+        $seen = array();
+        $gateways = array();
+        foreach ($registry->payment_gateways as $key => $gateway) {
+            if (!is_object($gateway) || empty($gateway->id) || isset($seen[$gateway->id])) {
+                continue;
+            }
+            $seen[$gateway->id] = true;
+            $gateways[$key] = $gateway;
+        }
+
+        $khipu = array();
+        $anchor = null;
+        $first = null;
+        foreach ($gateways as $key => $gateway) {
+            if (!($gateway instanceof WC_Gateway_khipu_abstract)) {
+                continue;
+            }
+            $class = get_class($gateway);
+            if (!defined($class . '::METHOD_ID')) {
+                continue; // Una subclase ajena sin medio: se deja donde está.
+            }
+            $khipu[constant($class . '::METHOD_ID')] = $gateway;
+            if (null === $first) {
+                $first = $key;
+            }
+            if (WC_Gateway_khipu_regular_transfer::ID === $gateway->id) {
+                $anchor = $key;
+            }
+        }
+        if (null === $anchor) {
+            $anchor = $first;
+        }
+
+        $ordered = array();
+        if (count($khipu) >= 2) {
+            $block = array();
+            foreach (WC_Khipu_Methods::sort_for_display(array_keys($khipu)) as $method_id) {
+                $block[] = $khipu[$method_id];
+            }
+            foreach ($gateways as $key => $gateway) {
+                if ($gateway instanceof WC_Gateway_khipu_abstract && defined(get_class($gateway) . '::METHOD_ID')) {
+                    if ($key === $anchor) {
+                        $ordered = array_merge($ordered, $block);
+                    }
+                    continue;
+                }
+                $ordered[] = $gateway;
+            }
+        } else {
+            $ordered = array_values($gateways);
+        }
+
+        // Mismas claves que tenía el registro, en orden ascendente: el segundo init() de
+        // WooCommerce vuelve a escribir en esas mismas claves y no duplica nada.
+        $keys = array_keys($gateways);
+        sort($keys);
+        $result = array();
+        foreach ($ordered as $i => $gateway) {
+            $result[$keys[$i]] = $gateway;
+        }
+        $registry->payment_gateways = $result;
+    }
+
+    add_action('wc_payment_gateways_initialized', 'woocommerce_gateway_khipu_sort_rows');
 
     /**
      * Aviso tras actualizar desde una versión con dos paneles: las credenciales
@@ -181,9 +341,11 @@ add_action(
         require_once __DIR__ . '/includes/class-wc-gateway-khipu-blocks-simplified-transfer.php';
         require_once __DIR__ . '/includes/class-wc-gateway-khipu-blocks-regular-transfer.php';
         require_once __DIR__ . '/includes/class-wc-gateway-khipu-blocks-ligopay.php';
+        require_once __DIR__ . '/includes/class-wc-gateway-khipu-blocks-nave.php';
         $registry->register( new WC_Gateway_khipu_blocks_regular_transfer() );
         $registry->register( new WC_Gateway_khipu_blocks_simplified_transfer() );
         $registry->register( new WC_Gateway_khipu_blocks_ligopay() );
+        $registry->register( new WC_Gateway_khipu_blocks_nave() );
 
     }
 );

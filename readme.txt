@@ -1,17 +1,17 @@
 === Khipu for WooCommerce ===
 Contributors: Khipu
-Tags: payment gateway, Khipu, woocommerce, chile, peru
+Tags: payment gateway, Khipu, chile, peru, argentina
 Requires at least: 6.0
-Tested up to: 6.8
-Stable tag: 4.3.0
+Tested up to: 7.1
+Stable tag: 4.3.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Permite el uso de khipu en WooCommerce, khipu es un medio de pago que permite pagar usando Cuentas Bancarias en Chile y Perú.
+Permite el uso de khipu en WooCommerce, khipu es un medio de pago que permite pagar usando Cuentas Bancarias en Chile, Perú y Argentina.
 
 == Description ==
 
-Permite el uso de khipu en WooCommerce, khipu es un medio de pago que permite pagar usando Cuentas Bancarias en Chile y Perú.
+Permite el uso de khipu en WooCommerce, khipu es un medio de pago que permite pagar usando Cuentas Bancarias en Chile, Perú y Argentina.
 
 **Aviso legal:** Este plugin no está afiliado ni respaldado por Automattic Inc. o por la marca WooCommerce. “WooCommerce” es una marca registrada de Automattic Inc.
 
@@ -27,7 +27,7 @@ Permite el uso de khipu en WooCommerce, khipu es un medio de pago que permite pa
 7. Copia el Id de cobrador, vuelve a la página de administración de WooCommerce y pégalo en el campo “Id cobrador”.
 8. Repite el paso 7, pero esta vez copiando y pegando la “Llave secreta” y luego presiona “Guardar cambios”.
 9. En la misma sección, crea un nuevo API KEY y repite el paso anterior, copiando y pegando en el formulario de configuración del plugin.
-10. Una vez guardadas las credenciales, en “Medios de pago a mostrar” marca los medios que quieres ofrecer en tu checkout. Cada medio aparece como una opción. Con el interruptor “Modo de pago” eliges entre Embebido (izquierda, por defecto) y Redirección (derecha). El pago embebido solo se habilitará para la transferencia simplificada, y solo si tu cuenta tiene ese medio; los demás medios (transferencia normal, LigoPay) siempre van por redirección. Sin transferencia simplificada activa, el interruptor queda deshabilitado en Redirección y todo va por redirección.
+10. Una vez guardadas las credenciales, en “Medios de pago a mostrar” marca los medios que quieres ofrecer en tu checkout. Cada medio aparece como una opción. Con el interruptor “Modo de pago” eliges entre Embebido (izquierda, por defecto) y Redirección (derecha). El pago embebido solo se habilitará para la transferencia simplificada, y solo si tu cuenta tiene ese medio; los demás medios (transferencia normal, LigoPay en Perú, pago por QR en Argentina) siempre van por redirección. Las filas de Khipu se ordenan solas: transferencia simplificada primero y transferencia normal al final. Sin transferencia simplificada activa, el interruptor queda deshabilitado en Redirección y todo va por redirección.
 
 == Frequently asked questions ==
 
@@ -40,6 +40,7 @@ No hay preguntas aún.
 3. https://s3.amazonaws.com/static.khipu.com/id-cobrador.png
 
 == Changelog ==
+4.3.1 Soporte para Argentina (ARS): pago por QR (NAVE) como medio propio, siempre por redirección. Las filas de Khipu se ordenan solas (transferencia simplificada primero, transferencia normal al final). Aviso en el panel si la tienda está en ARS con 0 decimales. Si ya guardaste la selección de medios, marca «Pago por QR» en el panel para ofrecerlo. Correcciones: un aviso de pago repetido ya no revive pedidos cancelados o reembolsados; dos avisos simultáneos no completan el pago dos veces; la llave y la API key se muestran como contraseña y no viajan por la REST; la fila «Khipu» de Ajustes → Pagos queda activa aunque tu cuenta no tenga transferencia normal. Requiere WooCommerce 8.5 o superior.
 4.3.0 Un solo panel de configuración de Khipu con título y descripción editables, pago embebido (modo Embebido o Redirección) y selección de los medios de pago de la cuenta. Soporte para Perú (PEN): transferencia normal y LigoPay, con pago por redirección (el modo embebido es solo para transferencia simplificada). Importante: al actualizar hay que volver a ingresar el Id de cobrador, la llave y la API Key. Ya no se pueden usar dos cuentas de cobro distintas en la misma tienda, el modo por defecto pasa a Embebido (solo para transferencia simplificada, si está activa) y aparecen todos los medios de pago que tenga la cuenta.
 4.2.0 Devolución de dinero (reembolso total o parcial) de pedidos pagados con Khipu, desde la lista de pedidos
 4.1.5 Cumplimiento normas Wordpress
@@ -66,6 +67,9 @@ No hay preguntas aún.
 
 
 == Upgrade Notice ==
+
+= 4.3.1 =
+Pago por QR para Argentina. Si ya habías guardado «Medios de pago a mostrar», entra al panel de Khipu y marca «Pago por QR» para ofrecerlo; si nunca lo guardaste, aparece solo cuando tu cuenta lo tiene.
 
 = 4.3.0 =
 Un solo panel de Khipu: tras actualizar, vuelve a ingresar Id de cobrador, llave y API Key en WooCommerce → Ajustes → Pagos → Khipu. Una sola cuenta de cobro por tienda. Embebido es el modo por defecto (solo transferencia simplificada) y aparecen todos los medios de tu cuenta.
