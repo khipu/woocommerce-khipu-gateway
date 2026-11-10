@@ -13,7 +13,7 @@ define('WC_KHIPU_PLUGIN_FILE', __FILE__);
  * Version:     4.3.1
  * Requires PHP: 7.4
  * WC requires at least: 8.5
- * WC tested up to: 10.2
+ * WC tested up to: 11.2
  * Author:      Khipu SpA
  * Author URI:  https://khipu.com/
  * Text Domain: woocommerce-khipu-gateway
