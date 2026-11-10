@@ -11,6 +11,8 @@ class WC_Khipu_Refund_Admin
         WC_Gateway_khipu_simplified_transfer::ID,
         WC_Gateway_khipu_regular_transfer::ID,
         WC_Gateway_khipu_ligopay::ID,
+        // Provisional en 4.3.1: se confirma con la reversa en vivo de un pago por QR.
+        WC_Gateway_khipu_nave::ID,
     ];
 
     public static function init()

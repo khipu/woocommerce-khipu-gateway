@@ -14,7 +14,7 @@ class WC_Gateway_khipu_blocks_ligopay extends \Automattic\WooCommerce\Blocks\Pay
         // Activa solo si la pasarela clásica quedó disponible (medio marcado,
         // presente en la cuenta y moneda soportada).
         $gateways = function_exists( 'WC' ) && WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : [];
-        return isset( $gateways[ WC_Gateway_khipu_ligopay::ID ] ) && 'yes' === $gateways[ WC_Gateway_khipu_ligopay::ID ]->enabled;
+        return isset( $gateways[ WC_Gateway_khipu_ligopay::ID ] ) && $gateways[ WC_Gateway_khipu_ligopay::ID ]->is_available();
     }
 
     public function get_payment_method_script_handles() {
